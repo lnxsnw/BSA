@@ -78,8 +78,13 @@
       BSA Quizzer
     </div>
     <div class="flex items-center gap-4">
-      <div id="stats-badge" class="hidden text-sm font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
-        Score: <span id="score-text" class="text-slate-900 dark:text-slate-50 font-bold">0/0</span>
+      <div class="flex items-center gap-2">
+        <div id="seed-badge-container" class="hidden items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-50 bg-slate-100 dark:bg-slate-800 w-8 h-8 rounded-full cursor-pointer transition-colors" onclick="navigator.clipboard.writeText(window.currentSeedString); alert('seed copied to clipboard')" title="Copy current seed">
+          <i data-lucide="hash" class="w-4 h-4"></i>
+        </div>
+        <div id="stats-badge" class="hidden text-sm font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
+          Score: <span id="score-text" class="text-slate-900 dark:text-slate-50 font-bold">0/0</span>
+        </div>
       </div>
       <button id="theme-toggle" class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
         <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
@@ -121,12 +126,20 @@
       </div>
       
       <div class="space-y-8">
+        <div id="subjects-group" class="filter-group"></div>
+        <div id="courses-group" class="filter-group"></div>
+        <div id="topics-group" class="filter-group"></div>
         <div id="types-group" class="filter-group"></div>
         <div id="diffs-group" class="filter-group"></div>
         <div id="tags-group" class="filter-group"></div>
       </div>
       
       <div class="mt-10 pt-6 border-t border-slate-100 dark:border-slate-800">
+        <div class="mb-6">
+           <label class="block text-sm font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-2 uppercase">Custom Seed</label>
+           <input type="text" id="seed-input" class="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-50 outline-none transition-all shadow-sm text-sm" placeholder="Leave blank to generate a random seed">
+           <p class="text-xs text-slate-400 mt-2">Entering a valid seed will override your filter selections above to load that specific set of questions.</p>
+        </div>
         <button id="start-quiz-btn" class="w-full inline-flex items-center justify-center rounded-md font-medium transition-colors h-12 px-8 bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90 text-base">
           Start Quiz Session
         </button>
@@ -204,42 +217,62 @@
 
     // Markdown Parser Functions
     function parseMarkdown(content) {
-      const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
-      const match = content.match(frontmatterRegex);
-      let metadata = {};
-      let body = content;
+      // Normalize line endings
+      content = content.replace(/\r\n/g, '\n');
       
-      if (match) {
-        try { metadata = jsyaml.load(match[1]); } catch (e) { return null; }
-        body = content.slice(match[0].length);
-      }
+      // Split by possible frontmatter start to handle multiple questions per file
+      const chunks = content.split(/(?=^---\n[a-zA-Z0-9_-]+:)/gm);
+      const results = [];
       
-      let problem = "";
-      let questions = [];
-      
-      if (metadata.type === "multi_question" || metadata.type === "multi_supply_answer") {
-        const problemRegex = /# Problem\n([\s\S]*?)(?=## Question \d+)/i;
-        const problemMatch = body.match(problemRegex);
-        if (problemMatch) problem = problemMatch[1];
+      for (let chunk of chunks) {
+        if (!chunk.trim()) continue;
         
-        const qParts = body.split(/## Question \d+/i).slice(1);
-        qParts.forEach((part, idx) => {
-           const correctOpt = Array.isArray(metadata.correct_options) ? metadata.correct_options[idx] : 
-                              (Array.isArray(metadata.correct_answers) ? metadata.correct_answers[idx] : null);
-           const qData = parseQuestionBlock(part, correctOpt, metadata.type);
-           if(qData) questions.push(qData);
-        });
-      } else if (metadata.type === "question" || metadata.type === "lesson" || metadata.type === "true_false" || metadata.type === "supply_answer") {
-        const correct = metadata.correct_option || metadata.correct_answer;
-        const qData = parseQuestionBlock(body, correct, metadata.type);
-        if (qData) questions.push(qData);
-      } else {
-        // Fallback for files without standard frontmatter type, but we read them all as requested
-        const qData = parseQuestionBlock(body, metadata.correct_option, metadata.type);
-        if (qData && (qData.options.length > 0 || qData.isSupply)) questions.push(qData);
+        const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
+        const match = chunk.match(frontmatterRegex);
+        let metadata = {};
+        let body = chunk;
+        
+        if (match) {
+          try { 
+            metadata = jsyaml.load(match[1]); 
+            if (typeof metadata !== 'object' || metadata === null) metadata = {};
+          } catch (e) { 
+            // fallback
+          }
+          body = chunk.slice(match[0].length);
+        }
+        
+        let problem = "";
+        let questions = [];
+        
+        if (metadata.type === "multi_question" || metadata.type === "multi_supply_answer") {
+          const problemRegex = /# Problem\n([\s\S]*?)(?=## Question \d+)/i;
+          const problemMatch = body.match(problemRegex);
+          if (problemMatch) problem = problemMatch[1];
+          
+          const qParts = body.split(/## Question \d+/i).slice(1);
+          qParts.forEach((part, idx) => {
+             const correctOpt = Array.isArray(metadata.correct_options) ? metadata.correct_options[idx] : 
+                                (Array.isArray(metadata.correct_answers) ? metadata.correct_answers[idx] : null);
+             const qData = parseQuestionBlock(part, correctOpt, metadata.type);
+             if(qData) questions.push(qData);
+          });
+        } else if (metadata.type === "question" || metadata.type === "lesson" || metadata.type === "true_false" || metadata.type === "supply_answer") {
+          const correct = metadata.correct_option || metadata.correct_answer;
+          const qData = parseQuestionBlock(body, correct, metadata.type);
+          if (qData) questions.push(qData);
+        } else {
+          // Fallback for files without standard frontmatter type
+          const qData = parseQuestionBlock(body, metadata.correct_option, metadata.type);
+          if (qData && (qData.options.length > 0 || qData.isSupply)) questions.push(qData);
+        }
+        
+        if (questions.length > 0) {
+          results.push({ metadata, problem, questions });
+        }
       }
       
-      return { metadata, problem, questions };
+      return results;
     }
 
     function parseQuestionBlock(text, correctOption, type) {
@@ -299,14 +332,28 @@
       const tagSet = new Set();
       const diffSet = new Set();
       const typeSet = new Set();
+      const subjectSet = new Set();
+      const courseSet = new Set();
+      const topicSet = new Set();
       
       // Parse all files
       for (let file of files) {
         try {
           const text = await file.text();
-          const parsed = parseMarkdown(text);
+          const parsedArray = parseMarkdown(text);
           
-          if (parsed && parsed.questions.length > 0) {
+          const pathParts = file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(1, -1) : [];
+          const subject = pathParts[0] || 'No Subject';
+          const course = pathParts[1] || 'No Course';
+          const topic = pathParts[2] || 'No Topic';
+          
+          if (parsedArray.length > 0) {
+              subjectSet.add(subject);
+              courseSet.add(course);
+              topicSet.add(topic);
+          }
+          
+          parsedArray.forEach(parsed => {
             const type = parsed.metadata.type || 'unknown';
             const diff = parsed.metadata.difficulty || 'unknown';
             typeSet.add(type);
@@ -318,13 +365,17 @@
             
             parsed.questions.forEach((q) => {
               allParsedItems.push({
+                hash: hashString((q.text || '') + (q.options ? q.options.map(o=>o.text).join('') : '')),
                 fileName: file.name,
+                subject: subject,
+                course: course,
+                topic: topic,
                 metadata: parsed.metadata,
                 problem: parsed.problem,
                 question: q
               });
             });
-          }
+          });
         } catch (err) {
           console.warn(`Error processing file ${file.name}:`, err);
         }
@@ -337,6 +388,15 @@
       document.getElementById('filter-screen').classList.remove('hidden');
       document.getElementById('filter-screen').style.display = 'flex'; // Tailwind flex
       
+      if (subjectSet.size > 1 || (subjectSet.size === 1 && !subjectSet.has('No Subject'))) {
+          renderCheckboxGroup('subjects-group', 'Subjects', Array.from(subjectSet).sort());
+      }
+      if (courseSet.size > 1 || (courseSet.size === 1 && !courseSet.has('No Course'))) {
+          renderCheckboxGroup('courses-group', 'Courses', Array.from(courseSet).sort());
+      }
+      if (topicSet.size > 1 || (topicSet.size === 1 && !topicSet.has('No Topic'))) {
+          renderCheckboxGroup('topics-group', 'Topics', Array.from(topicSet).sort());
+      }
       renderCheckboxGroup('types-group', 'Question Types', Array.from(typeSet).sort());
       renderCheckboxGroup('diffs-group', 'Difficulty Levels', Array.from(diffSet).sort());
       renderCheckboxGroup('tags-group', 'Tags', Array.from(tagSet).sort());
@@ -368,9 +428,9 @@
     }
 
     window.toggleAll = (groupId, isChecked) => {
-       if (isChecked) {
-          document.querySelectorAll(`.${groupId}-cb`).forEach(cb => { if(cb.value !== 'ALL') cb.checked = true; });
-       }
+       document.querySelectorAll(`.${groupId}-cb`).forEach(cb => { 
+          if (cb.value !== 'ALL') cb.checked = isChecked; 
+       });
     };
     
     window.uncheckAll = (groupId) => {
@@ -382,6 +442,47 @@
        if (allChecked && allCb) allCb.checked = true;
     };
 
+    // PRNG and Seed Logic
+    function mulberry32(a) {
+        return function() {
+          var t = a += 0x6D2B79F5;
+          t = Math.imul(t ^ t >>> 15, t | 1);
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+    }
+
+    function shuffleArray(array, rng) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(rng() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function hashString(str) {
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        }
+        return (hash >>> 0).toString(36).padStart(7, '0');
+    }
+
+    function encodeSeed(filters, hashes, rng) {
+        const obj = { f: filters, q: hashes, r: rng };
+        return 'BSA-' + btoa(encodeURIComponent(JSON.stringify(obj))).replace(/=/g, '');
+    }
+
+    function decodeSeed(str) {
+        if (!str.startsWith('BSA-')) return null;
+        try {
+            let b64 = str.substring(4);
+            while (b64.length % 4 !== 0) b64 += '=';
+            return JSON.parse(decodeURIComponent(atob(b64)));
+        } catch(e) {
+            return null;
+        }
+    }
+
     // Start Quiz
     document.getElementById('start-quiz-btn').addEventListener('click', () => {
       const getSelected = (groupId) => {
@@ -391,24 +492,100 @@
           return Array.from(cbs).filter(cb => cb.checked && cb.value !== 'ALL').map(cb => cb.value);
       };
 
-      const selectedTypes = getSelected('types-group');
-      const selectedDiffs = getSelected('diffs-group');
-      const selectedTags = getSelected('tags-group');
-      
-      quizItems = allParsedItems.filter(item => {
-          const t = item.metadata.type || 'unknown';
-          const d = item.metadata.difficulty || 'unknown';
-          const rawTags = item.metadata.tags || ['unknown'];
-          const itemTags = Array.isArray(rawTags) ? rawTags : [rawTags];
+      let selectedSubjects, selectedCourses, selectedTopics, selectedTypes, selectedDiffs, selectedTags;
+      let rngSeedValue;
+
+      const seedInput = document.getElementById('seed-input').value.trim();
+      if (seedInput) {
+          const decoded = decodeSeed(seedInput);
+          if (decoded && decoded.f && typeof decoded.r === 'number') {
+              rngSeedValue = decoded.r;
+              window.currentSeedString = seedInput;
+              
+              if (decoded.q) {
+                  // Freeze to exact questions from the generated seed
+                  const hashSet = new Set();
+                  if (typeof decoded.q === 'string') {
+                      for (let i = 0; i < decoded.q.length; i += 7) {
+                          hashSet.add(decoded.q.substring(i, i + 7));
+                      }
+                  } else if (Array.isArray(decoded.q)) { // fallback for any previously array-based seeds
+                      decoded.q.forEach(h => hashSet.add(h));
+                  }
+                  quizItems = allParsedItems.filter(item => hashSet.has(item.hash));
+              } else {
+                  // Fallback for older seeds (if any)
+                  selectedSubjects = decoded.f.s;
+                  selectedCourses = decoded.f.c;
+                  selectedTopics = decoded.f.to;
+                  selectedTypes = decoded.f.ty;
+                  selectedDiffs = decoded.f.d;
+                  selectedTags = decoded.f.ta;
+                  
+                  quizItems = allParsedItems.filter(item => {
+                      const t = item.metadata.type || 'unknown';
+                      const d = item.metadata.difficulty || 'unknown';
+                      const rawTags = item.metadata.tags || ['unknown'];
+                      const itemTags = Array.isArray(rawTags) ? rawTags : [rawTags];
+                      
+                      const subjMatch = selectedSubjects.includes('ALL') || selectedSubjects.includes(item.subject);
+                      const courseMatch = selectedCourses.includes('ALL') || selectedCourses.includes(item.course);
+                      const topicMatch = selectedTopics.includes('ALL') || selectedTopics.includes(item.topic);
+                      const typeMatch = selectedTypes.includes('ALL') || selectedTypes.includes(t);
+                      const diffMatch = selectedDiffs.includes('ALL') || selectedDiffs.includes(d);
+                      const tagMatch = selectedTags.includes('ALL') || itemTags.some(tag => selectedTags.includes(tag));
+                      
+                      return subjMatch && courseMatch && topicMatch && typeMatch && diffMatch && tagMatch;
+                  });
+              }
+          } else {
+              return alert('Invalid seed format provided. Please check the code and try again.');
+          }
+      } else {
+          selectedSubjects = document.getElementById('subjects-group').innerHTML ? getSelected('subjects-group') : ['ALL'];
+          selectedCourses = document.getElementById('courses-group').innerHTML ? getSelected('courses-group') : ['ALL'];
+          selectedTopics = document.getElementById('topics-group').innerHTML ? getSelected('topics-group') : ['ALL'];
+          selectedTypes = getSelected('types-group');
+          selectedDiffs = getSelected('diffs-group');
+          selectedTags = getSelected('tags-group');
           
-          const typeMatch = selectedTypes.includes('ALL') || selectedTypes.includes(t);
-          const diffMatch = selectedDiffs.includes('ALL') || selectedDiffs.includes(d);
-          const tagMatch = selectedTags.includes('ALL') || itemTags.some(tag => selectedTags.includes(tag));
+          quizItems = allParsedItems.filter(item => {
+              const t = item.metadata.type || 'unknown';
+              const d = item.metadata.difficulty || 'unknown';
+              const rawTags = item.metadata.tags || ['unknown'];
+              const itemTags = Array.isArray(rawTags) ? rawTags : [rawTags];
+              
+              const subjMatch = selectedSubjects.includes('ALL') || selectedSubjects.includes(item.subject);
+              const courseMatch = selectedCourses.includes('ALL') || selectedCourses.includes(item.course);
+              const topicMatch = selectedTopics.includes('ALL') || selectedTopics.includes(item.topic);
+              const typeMatch = selectedTypes.includes('ALL') || selectedTypes.includes(t);
+              const diffMatch = selectedDiffs.includes('ALL') || selectedDiffs.includes(d);
+              const tagMatch = selectedTags.includes('ALL') || itemTags.some(tag => selectedTags.includes(tag));
+              
+              return subjMatch && courseMatch && topicMatch && typeMatch && diffMatch && tagMatch;
+          });
           
-          return typeMatch && diffMatch && tagMatch;
-      });
+          if (quizItems.length === 0) return alert('No questions match your filter selections!');
+          
+          rngSeedValue = Math.floor(Math.random() * 99999999);
+          const hashesStr = quizItems.map(item => item.hash).join('');
+          window.currentSeedString = encodeSeed({
+              s: selectedSubjects, c: selectedCourses, to: selectedTopics,
+              ty: selectedTypes, d: selectedDiffs, ta: selectedTags
+          }, hashesStr, rngSeedValue);
+      }
       
-      if (quizItems.length === 0) return alert('No questions match your current filter selections!');
+      if (quizItems.length === 0) return alert('No questions from this seed could be found in your current vault.');
+      
+      // Shuffle using PRNG
+      const rng = mulberry32(rngSeedValue);
+      quizItems.sort((a, b) => (a.fileName + a.question.text).localeCompare(b.fileName + b.question.text));
+      shuffleArray(quizItems, rng);
+      
+      // Display the seed
+      document.getElementById('seed-badge-container').classList.remove('hidden');
+      document.getElementById('seed-badge-container').classList.add('flex');
+      lucide.createIcons();
       
       // Hide filter, show quiz
       document.getElementById('filter-screen').classList.add('hidden');
@@ -420,10 +597,11 @@
       correctCount = 0;
       updateScore();
       renderQuestion();
+      document.getElementById('seed-input').value = '';
     });
 
     function updateScore() {
-       document.getElementById('score-text').innerText = `${correctCount}/${currentIndex + (showingSolution ? 1 : 0)}`;
+       document.getElementById('score-text').innerText = `${correctCount}/${quizItems.length}`;
     }
 
     // Render Question
@@ -642,6 +820,9 @@
         const tagSet = new Set();
         const diffSet = new Set();
         const typeSet = new Set();
+        const subjectSet = new Set();
+        const courseSet = new Set();
+        const topicSet = new Set();
 
         const fetchPromises = mdFiles.map(async (file) => {
             const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${file.path}`;
@@ -649,8 +830,20 @@
                 const res = await fetch(rawUrl);
                 if (res.ok) {
                     const text = await res.text();
-                    const parsed = parseMarkdown(text);
-                    if (parsed && parsed.questions.length > 0) {
+                    const parsedArray = parseMarkdown(text);
+                    
+                    const pathParts = file.path ? file.path.split('/').slice(0, -1) : [];
+                    const subject = pathParts[0] || 'No Subject';
+                    const course = pathParts[1] || 'No Course';
+                    const topic = pathParts[2] || 'No Topic';
+
+                    if (parsedArray.length > 0) {
+                        subjectSet.add(subject);
+                        courseSet.add(course);
+                        topicSet.add(topic);
+                    }
+                    
+                    parsedArray.forEach(parsed => {
                         const type = parsed.metadata.type || 'unknown';
                         const diff = parsed.metadata.difficulty || 'unknown';
                         typeSet.add(type);
@@ -662,13 +855,17 @@
                         
                         parsed.questions.forEach((q) => {
                             allParsedItems.push({
+                                hash: hashString((q.text || '') + (q.options ? q.options.map(o=>o.text).join('') : '')),
                                 fileName: file.path.split('/').pop(),
+                                subject: subject,
+                                course: course,
+                                topic: topic,
                                 metadata: parsed.metadata,
                                 problem: parsed.problem,
                                 question: q
                             });
                         });
-                    }
+                    });
                 }
             } catch (err) {
                 console.warn(`Error fetching ${file.path}:`, err);
@@ -685,6 +882,15 @@
         document.getElementById('filter-screen').classList.remove('hidden');
         document.getElementById('filter-screen').style.display = 'flex';
         
+        if (subjectSet.size > 1 || (subjectSet.size === 1 && !subjectSet.has('No Subject'))) {
+            renderCheckboxGroup('subjects-group', 'Subjects', Array.from(subjectSet).sort());
+        }
+        if (courseSet.size > 1 || (courseSet.size === 1 && !courseSet.has('No Course'))) {
+            renderCheckboxGroup('courses-group', 'Courses', Array.from(courseSet).sort());
+        }
+        if (topicSet.size > 1 || (topicSet.size === 1 && !topicSet.has('No Topic'))) {
+            renderCheckboxGroup('topics-group', 'Topics', Array.from(topicSet).sort());
+        }
         renderCheckboxGroup('types-group', 'Question Types', Array.from(typeSet).sort());
         renderCheckboxGroup('diffs-group', 'Difficulty Levels', Array.from(diffSet).sort());
         renderCheckboxGroup('tags-group', 'Tags', Array.from(tagSet).sort());
