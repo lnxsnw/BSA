@@ -400,6 +400,8 @@
       renderCheckboxGroup('types-group', 'Question Types', Array.from(typeSet).sort());
       renderCheckboxGroup('diffs-group', 'Difficulty Levels', Array.from(diffSet).sort());
       renderCheckboxGroup('tags-group', 'Tags', Array.from(tagSet).sort());
+      
+      updateFiltersVisibility();
     });
 
     function renderCheckboxGroup(containerId, title, items) {
@@ -429,18 +431,147 @@
 
     window.toggleAll = (groupId, isChecked) => {
        document.querySelectorAll(`.${groupId}-cb`).forEach(cb => { 
-          if (cb.value !== 'ALL') cb.checked = isChecked; 
+          if (cb.value !== 'ALL') {
+              if (cb.closest('label').style.display !== 'none') {
+                  cb.checked = isChecked;
+              } else {
+                  cb.checked = false;
+              }
+          }
        });
+       if (['subjects-group', 'courses-group', 'topics-group'].includes(groupId)) {
+           updateFiltersVisibility();
+       }
     };
     
     window.uncheckAll = (groupId) => {
        const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
-       const anyUnchecked = Array.from(document.querySelectorAll(`.${groupId}-cb`)).some(cb => cb.value !== 'ALL' && !cb.checked);
+       const cbs = Array.from(document.querySelectorAll(`.${groupId}-cb`)).filter(cb => cb.value !== 'ALL');
+       const visibleCbs = cbs.filter(cb => cb.closest('label').style.display !== 'none');
+       
+       const anyUnchecked = visibleCbs.some(cb => !cb.checked);
        if (anyUnchecked && allCb) allCb.checked = false;
        
-       const allChecked = Array.from(document.querySelectorAll(`.${groupId}-cb`)).filter(cb => cb.value !== 'ALL').every(cb => cb.checked);
-       if (allChecked && allCb) allCb.checked = true;
+       const allChecked = visibleCbs.every(cb => cb.checked);
+       if (allChecked && visibleCbs.length > 0 && allCb) allCb.checked = true;
+       
+       if (['subjects-group', 'courses-group', 'topics-group'].includes(groupId)) {
+           updateFiltersVisibility();
+       }
     };
+
+    function updateFiltersVisibility() {
+        const getSelected = (groupId) => {
+            const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
+            if (allCb && allCb.checked) return ['ALL'];
+            const cbs = document.querySelectorAll(`.${groupId}-cb`);
+            return Array.from(cbs).filter(cb => cb.checked && cb.value !== 'ALL' && cb.closest('label').style.display !== 'none').map(cb => cb.value);
+        };
+
+        const selSubj = document.getElementById('subjects-group').innerHTML ? getSelected('subjects-group') : ['ALL'];
+        
+        const availableCourses = new Set();
+        allParsedItems.forEach(item => {
+            const subjMatch = selSubj.includes('ALL') || selSubj.includes(item.subject);
+            if (subjMatch) availableCourses.add(item.course);
+        });
+        
+        const coursesGroup = document.getElementById('courses-group');
+        if (coursesGroup && coursesGroup.innerHTML) {
+            let anyVisible = false;
+            document.querySelectorAll('.courses-group-cb').forEach(cb => {
+                if (cb.value === 'ALL') return;
+                const label = cb.closest('label');
+                if (availableCourses.has(cb.value)) {
+                    label.style.display = '';
+                    anyVisible = true;
+                } else {
+                    label.style.display = 'none';
+                    if (cb.checked) cb.checked = false;
+                }
+            });
+            coursesGroup.style.display = anyVisible ? '' : 'none';
+        }
+
+        updateAllCheckbox('courses-group');
+
+        const selCourse = document.getElementById('courses-group').innerHTML ? getSelected('courses-group') : ['ALL'];
+        
+        const availableTopics = new Set();
+        allParsedItems.forEach(item => {
+            const subjMatch = selSubj.includes('ALL') || selSubj.includes(item.subject);
+            const courseMatch = selCourse.includes('ALL') || selCourse.includes(item.course);
+            if (subjMatch && courseMatch) availableTopics.add(item.topic);
+        });
+
+        const topicsGroup = document.getElementById('topics-group');
+        if (topicsGroup && topicsGroup.innerHTML) {
+            let anyVisible = false;
+            document.querySelectorAll('.topics-group-cb').forEach(cb => {
+                if (cb.value === 'ALL') return;
+                const label = cb.closest('label');
+                if (availableTopics.has(cb.value)) {
+                    label.style.display = '';
+                    anyVisible = true;
+                } else {
+                    label.style.display = 'none';
+                    if (cb.checked) cb.checked = false;
+                }
+            });
+            topicsGroup.style.display = anyVisible ? '' : 'none';
+        }
+
+        updateAllCheckbox('topics-group');
+
+        const selTopic = document.getElementById('topics-group').innerHTML ? getSelected('topics-group') : ['ALL'];
+        
+        const availableTags = new Set();
+        allParsedItems.forEach(item => {
+            const subjMatch = selSubj.includes('ALL') || selSubj.includes(item.subject);
+            const courseMatch = selCourse.includes('ALL') || selCourse.includes(item.course);
+            const topicMatch = selTopic.includes('ALL') || selTopic.includes(item.topic);
+            if (subjMatch && courseMatch && topicMatch) {
+                const rawTags = item.metadata.tags || [];
+                const itemTags = Array.isArray(rawTags) ? rawTags : [rawTags];
+                itemTags.forEach(t => availableTags.add(t));
+            }
+        });
+
+        const tagsGroup = document.getElementById('tags-group');
+        if (tagsGroup && tagsGroup.innerHTML) {
+            let anyVisible = false;
+            document.querySelectorAll('.tags-group-cb').forEach(cb => {
+                if (cb.value === 'ALL') return;
+                const label = cb.closest('label');
+                if (availableTags.has(cb.value)) {
+                    label.style.display = '';
+                    anyVisible = true;
+                } else {
+                    label.style.display = 'none';
+                    if (cb.checked) cb.checked = false;
+                }
+            });
+            tagsGroup.style.display = anyVisible ? '' : 'none';
+        }
+
+        updateAllCheckbox('tags-group');
+    }
+
+    function updateAllCheckbox(groupId) {
+        const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
+        if (!allCb) return;
+        const cbs = Array.from(document.querySelectorAll(`.${groupId}-cb`)).filter(cb => cb.value !== 'ALL');
+        const visibleCbs = cbs.filter(cb => cb.closest('label').style.display !== 'none');
+        
+        if (visibleCbs.length === 0) {
+            allCb.checked = false;
+            allCb.closest('label').style.display = 'none';
+        } else {
+            allCb.closest('label').style.display = '';
+            const allChecked = visibleCbs.every(cb => cb.checked);
+            allCb.checked = allChecked;
+        }
+    }
 
     // PRNG and Seed Logic
     function mulberry32(a) {
@@ -489,11 +620,14 @@
           const cbs = document.querySelectorAll(`.${groupId}-cb`);
           const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
           if (allCb && allCb.checked) return ['ALL'];
-          return Array.from(cbs).filter(cb => cb.checked && cb.value !== 'ALL').map(cb => cb.value);
+          return Array.from(cbs).filter(cb => cb.checked && cb.value !== 'ALL' && cb.closest('label').style.display !== 'none').map(cb => cb.value);
       };
 
       let selectedSubjects, selectedCourses, selectedTopics, selectedTypes, selectedDiffs, selectedTags;
       let rngSeedValue;
+
+      let isCustomStringSeed = false;
+      let exactSeedDecoded = false;
 
       const seedInput = document.getElementById('seed-input').value.trim();
       if (seedInput) {
@@ -501,6 +635,7 @@
           if (decoded && decoded.f && typeof decoded.r === 'number') {
               rngSeedValue = decoded.r;
               window.currentSeedString = seedInput;
+              exactSeedDecoded = true;
               
               if (decoded.q) {
                   // Freeze to exact questions from the generated seed
@@ -539,9 +674,12 @@
                   });
               }
           } else {
-              return alert('Invalid seed format provided. Please check the code and try again.');
+              // Custom text seed with current filter selections
+              isCustomStringSeed = true;
           }
-      } else {
+      }
+
+      if (!exactSeedDecoded) {
           selectedSubjects = document.getElementById('subjects-group').innerHTML ? getSelected('subjects-group') : ['ALL'];
           selectedCourses = document.getElementById('courses-group').innerHTML ? getSelected('courses-group') : ['ALL'];
           selectedTopics = document.getElementById('topics-group').innerHTML ? getSelected('topics-group') : ['ALL'];
@@ -567,7 +705,16 @@
           
           if (quizItems.length === 0) return alert('No questions match your filter selections!');
           
-          rngSeedValue = Math.floor(Math.random() * 99999999);
+          if (isCustomStringSeed) {
+              let hash = 5381;
+              for (let i = 0; i < seedInput.length; i++) {
+                  hash = ((hash << 5) + hash) + seedInput.charCodeAt(i);
+              }
+              rngSeedValue = (hash >>> 0);
+          } else {
+              rngSeedValue = Math.floor(Math.random() * 99999999);
+          }
+          
           const hashesStr = quizItems.map(item => item.hash).join('');
           window.currentSeedString = encodeSeed({
               s: selectedSubjects, c: selectedCourses, to: selectedTopics,
@@ -894,6 +1041,8 @@
         renderCheckboxGroup('types-group', 'Question Types', Array.from(typeSet).sort());
         renderCheckboxGroup('diffs-group', 'Difficulty Levels', Array.from(diffSet).sort());
         renderCheckboxGroup('tags-group', 'Tags', Array.from(tagSet).sort());
+        
+        updateFiltersVisibility();
 
       } catch (error) {
         console.error("GitHub Auto-fetch failed:", error);
