@@ -211,30 +211,32 @@
       let problem = "";
       let questions = [];
       
-      if (metadata.type === "multi_question") {
+      if (metadata.type === "multi_question" || metadata.type === "multi_supply_answer") {
         const problemRegex = /# Problem\n([\s\S]*?)(?=## Question \d+)/i;
         const problemMatch = body.match(problemRegex);
         if (problemMatch) problem = problemMatch[1];
         
         const qParts = body.split(/## Question \d+/i).slice(1);
         qParts.forEach((part, idx) => {
-           const correctOpt = Array.isArray(metadata.correct_options) ? metadata.correct_options[idx] : null;
-           const qData = parseQuestionBlock(part, correctOpt);
+           const correctOpt = Array.isArray(metadata.correct_options) ? metadata.correct_options[idx] : 
+                              (Array.isArray(metadata.correct_answers) ? metadata.correct_answers[idx] : null);
+           const qData = parseQuestionBlock(part, correctOpt, metadata.type);
            if(qData) questions.push(qData);
         });
-      } else if (metadata.type === "question" || metadata.type === "lesson") {
-        const qData = parseQuestionBlock(body, metadata.correct_option);
+      } else if (metadata.type === "question" || metadata.type === "lesson" || metadata.type === "true_false" || metadata.type === "supply_answer") {
+        const correct = metadata.correct_option || metadata.correct_answer;
+        const qData = parseQuestionBlock(body, correct, metadata.type);
         if (qData) questions.push(qData);
       } else {
         // Fallback for files without standard frontmatter type, but we read them all as requested
-        const qData = parseQuestionBlock(body, metadata.correct_option);
-        if (qData && qData.options.length > 0) questions.push(qData);
+        const qData = parseQuestionBlock(body, metadata.correct_option, metadata.type);
+        if (qData && (qData.options.length > 0 || qData.isSupply)) questions.push(qData);
       }
       
       return { metadata, problem, questions };
     }
 
-    function parseQuestionBlock(text, correctOption) {
+    function parseQuestionBlock(text, correctOption, type) {
        let qText = text;
        let optionsText = "";
        let solutionText = "";
@@ -247,22 +249,38 @@
          if (solSplit.length > 1) {
             solutionText = solSplit[1].replace(/^>\s?/gm, ''); // Strip blockquotes
          }
+       } else {
+         const solSplit = text.split(/>\s*\[!(?:success|info|note)\][+-]?\s*(?:Solution|Answer|Explanation)/i);
+         qText = solSplit[0];
+         if (solSplit.length > 1) {
+            solutionText = solSplit[1].replace(/^>\s?/gm, '');
+         }
        }
        
-       const optionRegex = /- \[ \] ([A-D])[\.\)]\s*(.*)/g;
+       const optionRegex = /- \[ \]\s*(?:([A-D])[\.\)]\s+)?(.*)/gi;
        let options = [];
        let match;
        while ((match = optionRegex.exec(optionsText)) !== null) {
-          options.push({ letter: match[1].toUpperCase(), text: match[2].trim() });
+          let letter = match[1] ? match[1].toUpperCase() : match[2].trim().charAt(0).toUpperCase();
+          options.push({ letter: letter, text: match[2].trim() });
        }
        
-       if (options.length === 0) return null;
+       const isSupply = type === 'supply_answer' || type === 'multi_supply_answer';
+       if (options.length === 0 && !isSupply) return null;
+       
+       let cleanedCorrect = correctOption ? correctOption.toString().trim() : null;
+       if (!isSupply && cleanedCorrect) {
+          if (cleanedCorrect.toLowerCase() === 'true') cleanedCorrect = 'T';
+          else if (cleanedCorrect.toLowerCase() === 'false') cleanedCorrect = 'F';
+          else cleanedCorrect = cleanedCorrect.toUpperCase();
+       }
        
        return {
           text: qText.trim(),
           options: options,
           solution: solutionText.trim(),
-          correctOption: correctOption ? correctOption.toString().trim().toUpperCase() : null
+          correctOption: cleanedCorrect,
+          isSupply: isSupply
        };
     }
 
@@ -441,19 +459,38 @@
       const optsContainer = document.getElementById('options-container');
       optsContainer.innerHTML = '';
       
-      item.question.options.forEach(opt => {
-        const div = document.createElement('div');
-        div.className = 'option-card border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50 flex items-start gap-4 transition-all bg-white dark:bg-slate-950 shadow-sm';
-        div.onclick = () => selectOption(opt.letter, div);
-        
-        div.innerHTML = `
-          <div class="flex-shrink-0 w-8 h-8 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center mt-0.5 text-sm font-bold letter-circle transition-all">
-            ${opt.letter}
-          </div>
-          <div class="prose dark:prose-invert prose-slate max-w-none pt-1 flex-1">${marked.parseInline(opt.text)}</div>
-        `;
-        optsContainer.appendChild(div);
-      });
+      if (item.question.isSupply) {
+         optsContainer.innerHTML = `
+            <div class="mt-4">
+               <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Your Answer</label>
+               <input type="text" id="supply-input" class="w-full sm:max-w-md px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-50 outline-none transition-all shadow-sm" placeholder="Type your answer here..." autocomplete="off">
+            </div>
+         `;
+         const supplyInput = document.getElementById('supply-input');
+         supplyInput.addEventListener('input', (e) => {
+             selectedLetter = e.target.value.trim();
+             document.getElementById('check-btn').disabled = selectedLetter.length === 0;
+         });
+         supplyInput.addEventListener('keypress', (e) => {
+             if (e.key === 'Enter' && selectedLetter && selectedLetter.length > 0) {
+                 document.getElementById('check-btn').click();
+             }
+         });
+      } else {
+         item.question.options.forEach(opt => {
+           const div = document.createElement('div');
+           div.className = 'option-card border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50 flex items-start gap-4 transition-all bg-white dark:bg-slate-950 shadow-sm';
+           div.onclick = () => selectOption(opt.letter, div);
+           
+           div.innerHTML = `
+             <div class="flex-shrink-0 w-8 h-8 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center mt-0.5 text-sm font-bold letter-circle transition-all">
+               ${opt.letter}
+             </div>
+             <div class="prose dark:prose-invert prose-slate max-w-none pt-1 flex-1">${marked.parseInline(opt.text)}</div>
+           `;
+           optsContainer.appendChild(div);
+         });
+      }
       
       document.getElementById('solution-container').classList.add('hidden');
       const checkBtn = document.getElementById('check-btn');
@@ -486,33 +523,48 @@
     }
 
     document.getElementById('check-btn').addEventListener('click', () => {
-      if (!selectedLetter) return;
+      if (selectedLetter === null || selectedLetter === undefined || selectedLetter === "") return;
       showingSolution = true;
       
       const item = quizItems[currentIndex];
       const correct = item.question.correctOption;
       
-      if (selectedLetter === correct) correctCount++;
-      updateScore();
+      if (item.question.isSupply) {
+         if (selectedLetter.toLowerCase() === correct.toLowerCase()) {
+             correctCount++;
+             document.getElementById('supply-input').classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/20', 'ring-1', 'ring-emerald-500');
+         } else {
+             document.getElementById('supply-input').classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-950/20', 'ring-1', 'ring-red-500');
+             const p = document.createElement('p');
+             p.className = "text-red-600 dark:text-red-400 mt-2 text-sm font-semibold flex items-center gap-1.5";
+             p.innerHTML = `<i data-lucide="x-circle" class="w-4 h-4"></i> Correct answer: ${correct}`;
+             document.getElementById('supply-input').parentNode.appendChild(p);
+         }
+         document.getElementById('supply-input').disabled = true;
+      } else {
+         if (selectedLetter === correct) correctCount++;
+         
+         document.querySelectorAll('.option-card').forEach(el => {
+           const letter = el.querySelector('.letter-circle').innerText.trim();
+           const circle = el.querySelector('.letter-circle');
+           
+           el.classList.remove('ring-2', 'ring-slate-900', 'dark:ring-slate-50', 'border-slate-900', 'dark:border-slate-50');
+           
+           if (letter === correct) {
+             el.classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/20', 'ring-1', 'ring-emerald-500');
+             circle.classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+             circle.classList.remove('bg-slate-900', 'dark:bg-slate-50', 'text-slate-900', 'border-slate-200', 'dark:border-slate-700');
+           } else if (letter === selectedLetter && selectedLetter !== correct) {
+             el.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-950/20', 'ring-1', 'ring-red-500');
+             circle.classList.add('bg-red-500', 'text-white', 'border-red-500');
+             circle.classList.remove('bg-slate-900', 'dark:bg-slate-50', 'text-slate-900', 'border-slate-200', 'dark:border-slate-700');
+           } else {
+             el.classList.add('opacity-40');
+           }
+         });
+      }
       
-      document.querySelectorAll('.option-card').forEach(el => {
-        const letter = el.querySelector('.letter-circle').innerText.trim();
-        const circle = el.querySelector('.letter-circle');
-        
-        el.classList.remove('ring-2', 'ring-slate-900', 'dark:ring-slate-50', 'border-slate-900', 'dark:border-slate-50');
-        
-        if (letter === correct) {
-          el.classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/20', 'ring-1', 'ring-emerald-500');
-          circle.classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
-          circle.classList.remove('bg-slate-900', 'dark:bg-slate-50', 'text-slate-900', 'border-slate-200', 'dark:border-slate-700');
-        } else if (letter === selectedLetter && selectedLetter !== correct) {
-          el.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-950/20', 'ring-1', 'ring-red-500');
-          circle.classList.add('bg-red-500', 'text-white', 'border-red-500');
-          circle.classList.remove('bg-slate-900', 'dark:bg-slate-50', 'text-slate-900', 'border-slate-200', 'dark:border-slate-700');
-        } else {
-          el.classList.add('opacity-40');
-        }
-      });
+      updateScore();
       
       document.getElementById('check-btn').classList.add('hidden');
       document.getElementById('next-btn').classList.remove('hidden');

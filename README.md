@@ -230,3 +230,153 @@ What amount should be reported as total current liabilities on December 31, 2014
 > B is incorrect — it only partially adjusts for the reclassifications.
 > C is incorrect — it uses the unadjusted reported total without correcting for improperly netted items.
 ```
+
+### True/False Template
+
+For true or false statements, use the following template. The `correct_option` should be `"True"` or `"False"`.
+
+```markdown
+---
+type: "true_false"
+tags:
+  - insert_topic
+difficulty: "easy"
+correct_option: "True"
+---
+
+# [Insert the statement here]
+
+## Options
+- [ ] True
+- [ ] False
+
+> [!success]- Solution
+> **[True/False]** is the correct answer. 
+> [Insert a detailed explanation here.]
+```
+
+### Example Output (True/False)
+
+```markdown
+---
+type: "true_false"
+tags:
+  - inventory_management
+difficulty: "easy"
+correct_option: "True"
+---
+
+# Inventory management is the process of tracking and controlling the flow of goods—raw materials, works-in-progress, and finished products—through every stage, from initial purchase through final sale.
+
+## Options
+- [ ] True
+- [ ] False
+
+> [!success]- Solution
+> **True** is the correct answer. 
+> Inventory management encompasses the entire lifecycle of goods from acquisition to sale.
+```
+
+### Supply the Answer Template
+
+For computational or direct answer questions where no choices are provided, use the following template. The `type` is `"supply_answer"` and a `correct_answer` field replaces `correct_option`.
+
+```markdown
+---
+type: "supply_answer"
+tags:
+  - insert_topic
+difficulty: "medium"
+correct_answer: "[Insert exact answer]"
+---
+
+# [Insert the specific question or problem text here]
+
+> [!success]- Solution
+> **[Correct Answer]** is the correct answer. 
+> [Insert a detailed explanation or computation here.]
+```
+
+### Multi-Question Supply the Answer Template
+
+For problems with a shared scenario and multiple computational questions, use this template.
+
+```markdown
+---
+type: "multi_supply_answer"
+tags:
+  - insert_topic
+difficulty: "medium"
+correct_answers:
+  - "[Answer 1]"
+  - "[Answer 2]"
+---
+
+# Problem
+
+[Insert the shared problem scenario/data here]
+
+## Question 1
+
+[Insert the first question text here]
+
+> [!success]- Solution
+> **[Correct Answer 1]** is the correct answer. 
+> [Insert a detailed explanation or computation here.]
+
+## Question 2
+
+[Insert the second question text here]
+
+> [!success]- Solution
+> **[Correct Answer 2]** is the correct answer. 
+> [Insert a detailed explanation or computation here.]
+```
+
+### Example Output (Multi-Question Supply the Answer)
+
+```markdown
+---
+type: "multi_supply_answer"
+tags:
+  - cost_volume_profit
+  - break_even_analysis
+difficulty: "medium"
+correct_answers:
+  - "5.20"
+  - "600"
+  - "5,970.00"
+---
+
+# Problem
+
+Perfect Stampers makes and sells aftermarket hub caps. The variable cost for each hub cap is P4.75 and the hub cap sells for P9.95.
+Perfect Stampers has fixed costs per month of P3,120.
+
+## Question 1
+
+Compute the contribution margin per unit.
+
+> [!success]- Solution
+> **5.20** is the correct answer. 
+> Contribution Margin per Unit = Selling Price - Variable Cost
+> CM per unit = P9.95 - P4.75 = P5.20
+
+## Question 2
+
+Compute the break-even sales in units for the month.
+
+> [!success]- Solution
+> **600** is the correct answer. 
+> Break-even Sales in Units = Fixed Costs / Contribution Margin per Unit
+> BEP in units = P3,120 / P5.20 = 600 units
+
+## Question 3
+
+Compute the break-even sales in pesos for the month.
+
+> [!success]- Solution
+> **5,970.00** is the correct answer. 
+> Break-even Sales in Pesos = Break-even Sales in Units * Selling Price
+> BEP in pesos = 600 units * P9.95 = P5,970.00
+```
