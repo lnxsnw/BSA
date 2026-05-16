@@ -90,7 +90,7 @@
 
   <!-- Setup Screen -->
   <main id="setup-screen" class="flex flex-col items-center justify-center min-h-[80vh] px-4">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
+    <div id="setup-content" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
       <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-900 dark:text-slate-50">
         <i data-lucide="folder-archive" class="w-8 h-8"></i>
       </div>
@@ -103,6 +103,12 @@
         <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden" accept=".md" />
       </label>
       <p class="text-xs text-slate-400 mt-4">Safe to select the entire Obsidian vault. It will ignore README.md and only process valid items.</p>
+    </div>
+
+    <div id="loading-content" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 dark:border-slate-50 mx-auto mb-6"></div>
+      <h1 class="text-2xl font-bold tracking-tight mb-2">Loading Repository...</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-sm">Automatically fetching questions from GitHub Pages.</p>
     </div>
   </main>
 
@@ -608,6 +614,90 @@
         lucide.createIcons();
       }
     });
+
+    // Auto-fetch from GitHub Pages
+    async function initGitHubPages() {
+      const hostname = window.location.hostname;
+      if (!hostname.endsWith('.github.io')) return;
+
+      document.getElementById('setup-content').classList.add('hidden');
+      document.getElementById('loading-content').classList.remove('hidden');
+
+      const username = hostname.split('.')[0];
+      const pathParts = window.location.pathname.split('/').filter(p => p);
+      const repo = pathParts.length > 0 && !pathParts[0].endsWith('.html') ? pathParts[0] : `${username}.github.io`;
+
+      try {
+        const repoRes = await fetch(`https://api.github.com/repos/${username}/${repo}`);
+        if (!repoRes.ok) throw new Error('Repo not found');
+        const repoData = await repoRes.json();
+        const branch = repoData.default_branch;
+
+        const treeRes = await fetch(`https://api.github.com/repos/${username}/${repo}/git/trees/${branch}?recursive=1`);
+        const treeData = await treeRes.json();
+
+        const mdFiles = treeData.tree.filter(f => f.path.endsWith('.md') && !f.path.toLowerCase().endsWith('readme.md'));
+
+        allParsedItems = [];
+        const tagSet = new Set();
+        const diffSet = new Set();
+        const typeSet = new Set();
+
+        const fetchPromises = mdFiles.map(async (file) => {
+            const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${file.path}`;
+            try {
+                const res = await fetch(rawUrl);
+                if (res.ok) {
+                    const text = await res.text();
+                    const parsed = parseMarkdown(text);
+                    if (parsed && parsed.questions.length > 0) {
+                        const type = parsed.metadata.type || 'unknown';
+                        const diff = parsed.metadata.difficulty || 'unknown';
+                        typeSet.add(type);
+                        diffSet.add(diff);
+                        if (parsed.metadata.tags) {
+                            const tagsArray = Array.isArray(parsed.metadata.tags) ? parsed.metadata.tags : [parsed.metadata.tags];
+                            tagsArray.forEach(t => tagSet.add(t));
+                        }
+                        
+                        parsed.questions.forEach((q) => {
+                            allParsedItems.push({
+                                fileName: file.path.split('/').pop(),
+                                metadata: parsed.metadata,
+                                problem: parsed.problem,
+                                question: q
+                            });
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn(`Error fetching ${file.path}:`, err);
+            }
+        });
+
+        await Promise.all(fetchPromises);
+
+        if (allParsedItems.length === 0) {
+            throw new Error("No questions found in the GitHub repository.");
+        }
+
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('filter-screen').classList.remove('hidden');
+        document.getElementById('filter-screen').style.display = 'flex';
+        
+        renderCheckboxGroup('types-group', 'Question Types', Array.from(typeSet).sort());
+        renderCheckboxGroup('diffs-group', 'Difficulty Levels', Array.from(diffSet).sort());
+        renderCheckboxGroup('tags-group', 'Tags', Array.from(tagSet).sort());
+
+      } catch (error) {
+        console.error("GitHub Auto-fetch failed:", error);
+        document.getElementById('loading-content').classList.add('hidden');
+        document.getElementById('setup-content').classList.remove('hidden');
+      }
+    }
+
+    // Run on load
+    initGitHubPages();
   </script>
 </body>
 </html>
