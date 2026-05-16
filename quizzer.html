@@ -4,43 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BSA Quizzer</title>
-  
-  <!-- Local Scripts -->
-  <script src="0 - Other BSA Stuff/0.00 - Quizzer Files/tailwind.js"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          typography: {
-            DEFAULT: {
-              css: {
-                maxWidth: 'none',
-                color: 'inherit',
-                a: { color: 'inherit' },
-                strong: { color: 'inherit' },
-                th: { color: 'inherit' },
-                td: { color: 'inherit' },
-                h1: { color: 'inherit' },
-                h2: { color: 'inherit' },
-                h3: { color: 'inherit' },
-                h4: { color: 'inherit' },
-                code: { color: 'inherit' },
-              },
-            },
-          },
-        }
-      }
-    }
-  </script>
-  
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <!-- Local Dependencies -->
   <script src="0 - Other BSA Stuff/0.00 - Quizzer Files/marked.min.js"></script>
   <script src="0 - Other BSA Stuff/0.00 - Quizzer Files/js-yaml.min.js"></script>
   <script src="0 - Other BSA Stuff/0.00 - Quizzer Files/lucide.min.js"></script>
-  
+
   <script>
-    // Theme auto-selection based on browser settings
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
     } else {
@@ -49,165 +24,630 @@
   </script>
 
   <style>
-    /* Custom Scrollbar */
+    /* ===== SHADCN DESIGN TOKENS ===== */
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 240 10% 3.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 240 10% 3.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 240 10% 3.9%;
+      --primary: 240 5.9% 10%;
+      --primary-foreground: 0 0% 98%;
+      --secondary: 240 4.8% 95.9%;
+      --secondary-foreground: 240 5.9% 10%;
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 46.1%;
+      --accent: 240 4.8% 95.9%;
+      --accent-foreground: 240 5.9% 10%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+      --success: 142 76% 36%;
+      --success-foreground: 0 0% 98%;
+      --warning: 38 92% 50%;
+      --warning-foreground: 0 0% 98%;
+      --border: 240 5.9% 90%;
+      --input: 240 5.9% 90%;
+      --ring: 240 5.9% 10%;
+      --radius: 0.5rem;
+    }
+
+    .dark {
+      --background: 240 10% 3.9%;
+      --foreground: 0 0% 98%;
+      --card: 240 10% 3.9%;
+      --card-foreground: 0 0% 98%;
+      --popover: 240 10% 3.9%;
+      --popover-foreground: 0 0% 98%;
+      --primary: 0 0% 98%;
+      --primary-foreground: 240 5.9% 10%;
+      --secondary: 240 3.7% 15.9%;
+      --secondary-foreground: 0 0% 98%;
+      --muted: 240 3.7% 15.9%;
+      --muted-foreground: 240 5% 64.9%;
+      --accent: 240 3.7% 15.9%;
+      --accent-foreground: 0 0% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 0 0% 98%;
+      --success: 142 76% 26%;
+      --success-foreground: 0 0% 98%;
+      --warning: 38 92% 40%;
+      --warning-foreground: 0 0% 98%;
+      --border: 240 3.7% 15.9%;
+      --input: 240 3.7% 15.9%;
+      --ring: 240 4.9% 83.9%;
+    }
+
+    /* ===== BASE RESET ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background-color 0.2s, color 0.2s;
+      line-height: 1.6;
+    }
+
+    /* ===== SCROLLBAR ===== */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    .dark ::-webkit-scrollbar-thumb { background: #334155; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    
-    /* Table Styling overrides for markdown prose */
-    .prose table { border-collapse: collapse; width: 100%; margin-top: 1rem; margin-bottom: 1rem; }
-    .prose th, .prose td { border: 1px solid #e2e8f0; padding: 0.5rem; }
-    .dark .prose th, .dark .prose td { border-color: #1e293b; }
-    .prose th { background-color: #f8fafc; font-weight: 600; text-align: left; }
-    .dark .prose th { background-color: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
 
-    /* Hide standard checkboxes for custom styling */
-    .filter-cb { accent-color: #0f172a; }
-    .dark .filter-cb { accent-color: #f8fafc; }
+    /* ===== TYPOGRAPHY (prose for markdown) ===== */
+    .prose { max-width: none; color: inherit; line-height: 1.75; }
+    .prose h1, .prose h2, .prose h3, .prose h4 { color: inherit; font-weight: 600; margin-top: 1.25em; margin-bottom: 0.5em; }
+    .prose h1 { font-size: 1.5rem; }
+    .prose h2 { font-size: 1.25rem; }
+    .prose h3 { font-size: 1.1rem; }
+    .prose p { margin-bottom: 0.75em; }
+    .prose ul, .prose ol { padding-left: 1.5em; margin-bottom: 0.75em; }
+    .prose li { margin-bottom: 0.25em; }
+    .prose code {
+      background: hsl(var(--muted));
+      padding: 0.15em 0.4em;
+      border-radius: 0.25rem;
+      font-size: 0.875em;
+      font-family: 'Fira Code', 'Consolas', monospace;
+    }
+    .prose pre { background: hsl(var(--muted)); padding: 1rem; border-radius: var(--radius); overflow-x: auto; margin-bottom: 1em; }
+    .prose pre code { background: none; padding: 0; }
+    .prose strong { color: inherit; font-weight: 600; }
+    .prose a { color: hsl(var(--primary)); text-decoration: underline; }
+    .prose blockquote { border-left: 3px solid hsl(var(--border)); padding-left: 1em; color: hsl(var(--muted-foreground)); margin-bottom: 0.75em; }
+    .prose table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    .prose th, .prose td { border: 1px solid hsl(var(--border)); padding: 0.5rem 0.75rem; text-align: left; }
+    .prose th { background: hsl(var(--muted)); font-weight: 600; }
+    .prose img { max-width: 100%; border-radius: var(--radius); }
+
+    /* ===== UTILITY CLASSES ===== */
+    .hidden { display: none !important; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+    /* ===== NAVBAR ===== */
+    .navbar {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.875rem 1.5rem;
+      background: hsl(var(--background) / 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid hsl(var(--border));
+    }
+    .navbar-brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.05rem; letter-spacing: -0.02em; }
+    .navbar-actions { display: flex; align-items: center; gap: 0.75rem; }
+    .seed-badge {
+      display: none; align-items: center; justify-content: center;
+      width: 2rem; height: 2rem; border-radius: 50%;
+      background: hsl(var(--muted)); color: hsl(var(--muted-foreground));
+      cursor: pointer; transition: color 0.15s;
+    }
+    .seed-badge:hover { color: hsl(var(--foreground)); }
+    .stats-badge {
+      display: none; font-size: 0.8125rem; font-weight: 500;
+      color: hsl(var(--muted-foreground));
+      background: hsl(var(--muted));
+      padding: 0.25rem 0.75rem; border-radius: 9999px;
+    }
+    .stats-badge .score-value { color: hsl(var(--foreground)); font-weight: 700; }
+    .theme-btn {
+      display: flex; align-items: center; justify-content: center;
+      padding: 0.5rem; border-radius: var(--radius); border: none;
+      background: transparent; color: hsl(var(--foreground));
+      cursor: pointer; transition: background 0.15s;
+    }
+    .theme-btn:hover { background: hsl(var(--accent)); }
+    .theme-btn .icon-moon { display: block; }
+    .theme-btn .icon-sun { display: none; }
+    .dark .theme-btn .icon-moon { display: none; }
+    .dark .theme-btn .icon-sun { display: block; }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+      font-family: inherit; font-size: 0.875rem; font-weight: 500;
+      padding: 0.625rem 1.5rem; border-radius: var(--radius);
+      border: none; cursor: pointer;
+      transition: background 0.15s, opacity 0.15s, box-shadow 0.15s;
+      line-height: 1.25;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary {
+      background: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+    .btn-outline {
+      background: hsl(var(--background)); color: hsl(var(--foreground));
+      border: 1px solid hsl(var(--input));
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    .btn-outline:hover:not(:disabled) { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
+    .btn-lg { padding: 0.75rem 2rem; font-size: 1rem; height: 2.75rem; }
+    .btn-full { width: 100%; }
+
+    /* ===== CARDS ===== */
+    .card {
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: calc(var(--radius) * 2);
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    }
+    .card-padded { padding: 2rem; }
+
+    /* ===== SCREEN LAYOUTS ===== */
+    .screen-center {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 80vh; padding: 1rem;
+    }
+    .screen-quiz {
+      width: 100%; max-width: 56rem;
+      margin: 0 auto; padding: 2rem 1rem 5rem;
+    }
+
+    /* ===== INPUT ===== */
+    .input {
+      width: 100%; padding: 0.625rem 1rem;
+      font-family: inherit; font-size: 0.875rem;
+      background: hsl(var(--background));
+      border: 1px solid hsl(var(--input));
+      border-radius: var(--radius);
+      color: hsl(var(--foreground));
+      outline: none; transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    .input::placeholder { color: hsl(var(--muted-foreground)); }
+    .input:focus { border-color: hsl(var(--ring)); box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2); }
+
+    /* ===== FILTER CHECKBOX LABELS ===== */
+    .filter-label {
+      display: flex; align-items: center; gap: 0.5rem;
+      cursor: pointer; user-select: none;
+      padding: 0.4375rem 0.875rem;
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--background));
+      font-size: 0.8125rem;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .filter-label:hover { background: hsl(var(--accent)); }
+    .filter-label input[type="checkbox"] {
+      width: 1rem; height: 1rem; border-radius: 0.25rem;
+      accent-color: hsl(var(--primary));
+    }
+    .filter-label .label-text { font-weight: 400; }
+    .filter-label .label-text-bold { font-weight: 500; }
+    .filter-section-title {
+      font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 0.625rem;
+    }
+    .filter-group + .filter-group { margin-top: 1.5rem; }
+    .filter-items { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    /* ===== OPTION CARDS (Quiz) ===== */
+    .option-card {
+      display: flex; align-items: flex-start; gap: 1rem;
+      padding: 1rem 1.25rem;
+      border: 1px solid hsl(var(--border));
+      border-radius: calc(var(--radius) * 1.5);
+      background: hsl(var(--card));
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    }
+    .option-card:hover { background: hsl(var(--accent)); }
+    .option-card + .option-card { margin-top: 0.625rem; }
+    .option-card.selected {
+      border-color: hsl(var(--ring));
+      box-shadow: 0 0 0 2px hsl(var(--ring) / 0.15);
+      background: hsl(var(--accent));
+    }
+    .option-card.correct {
+      border-color: hsl(var(--success));
+      background: hsl(var(--success) / 0.08);
+      box-shadow: 0 0 0 1px hsl(var(--success) / 0.3);
+    }
+    .option-card.incorrect {
+      border-color: hsl(var(--destructive));
+      background: hsl(var(--destructive) / 0.08);
+      box-shadow: 0 0 0 1px hsl(var(--destructive) / 0.3);
+    }
+    .option-card.dimmed { opacity: 0.4; }
+
+    .letter-circle {
+      flex-shrink: 0; width: 2rem; height: 2rem;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      border: 2px solid hsl(var(--border));
+      font-size: 0.8125rem; font-weight: 700;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      margin-top: 0.125rem;
+    }
+    .option-card.selected .letter-circle {
+      background: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+      border-color: hsl(var(--primary));
+    }
+    .option-card.correct .letter-circle {
+      background: hsl(var(--success)); color: hsl(var(--success-foreground));
+      border-color: hsl(var(--success));
+    }
+    .option-card.incorrect .letter-circle {
+      background: hsl(var(--destructive)); color: hsl(var(--destructive-foreground));
+      border-color: hsl(var(--destructive));
+    }
+    .option-text { flex: 1; padding-top: 0.2rem; }
+
+    /* ===== BADGES ===== */
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.375rem;
+      font-size: 0.75rem; font-weight: 600;
+      padding: 0.25rem 0.625rem;
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--card));
+      color: hsl(var(--muted-foreground));
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    }
+    .badge-file { max-width: 200px; }
+    .badge-file .badge-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .badge-easy { background: hsl(142 76% 96%); color: hsl(142 76% 30%); border-color: hsl(142 76% 85%); }
+    .dark .badge-easy { background: hsl(142 76% 10%); color: hsl(142 50% 60%); border-color: hsl(142 40% 20%); }
+    .badge-medium { background: hsl(38 92% 95%); color: hsl(38 92% 35%); border-color: hsl(38 80% 80%); }
+    .dark .badge-medium { background: hsl(38 60% 10%); color: hsl(38 70% 55%); border-color: hsl(38 50% 22%); }
+    .badge-hard { background: hsl(0 84% 96%); color: hsl(0 70% 40%); border-color: hsl(0 70% 85%); }
+    .dark .badge-hard { background: hsl(0 60% 10%); color: hsl(0 60% 55%); border-color: hsl(0 40% 22%); }
+
+    /* ===== SOLUTION BLOCK ===== */
+    .solution-block {
+      margin-top: 2rem; padding: 1.25rem 1.5rem;
+      background: hsl(45 100% 97%);
+      border: 1px solid hsl(45 80% 85%);
+      border-radius: calc(var(--radius) * 1.5);
+    }
+    .dark .solution-block {
+      background: hsl(var(--muted) / 0.5);
+      border-color: hsl(var(--border));
+    }
+    .solution-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 1rem; font-weight: 600;
+      margin-bottom: 0.75rem; padding-bottom: 0.5rem;
+      border-bottom: 1px solid hsl(var(--border) / 0.5);
+    }
+    .solution-header .icon { color: hsl(45 90% 45%); }
+
+    /* ===== PROBLEM CONTEXT ===== */
+    .problem-block {
+      margin-bottom: 1.5rem; padding: 1.25rem 1.5rem;
+      background: hsl(var(--muted) / 0.5);
+      border: 1px solid hsl(var(--border));
+      border-radius: calc(var(--radius) * 1.5);
+    }
+    .problem-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.6875rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: hsl(var(--muted-foreground));
+      margin-bottom: 0.75rem;
+    }
+
+    /* ===== MISC ===== */
+    .quiz-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+    .badge-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .actions-bar { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid hsl(var(--border)); display: flex; justify-content: space-between; align-items: center; }
+    .section-divider { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid hsl(var(--border)); }
+    .icon-container { width: 4rem; height: 4rem; border-radius: 50%; background: hsl(var(--muted)); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: hsl(var(--foreground)); }
+    .text-center { text-align: center; }
+    .text-muted { color: hsl(var(--muted-foreground)); }
+    .text-sm { font-size: 0.875rem; }
+    .text-xs { font-size: 0.75rem; }
+    .text-lg { font-size: 1.125rem; }
+    .font-medium { font-weight: 500; }
+    .font-bold { font-weight: 700; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-6 { margin-bottom: 1.5rem; }
+    .mt-2 { margin-top: 0.5rem; }
+    .mt-4 { margin-top: 1rem; }
+    .ml-auto { margin-left: auto; }
+    .max-w-md { max-width: 28rem; width: 100%; }
+    .max-w-2xl { max-width: 42rem; width: 100%; }
+    .animate-spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 3rem; height: 3rem; border-radius: 50%; border: 2px solid transparent; border-bottom-color: hsl(var(--foreground)); margin: 0 auto 1.5rem; }
+
+    /* Supply answer feedback */
+    .input-correct { border-color: hsl(var(--success)) !important; background: hsl(var(--success) / 0.06) !important; box-shadow: 0 0 0 1px hsl(var(--success) / 0.3) !important; }
+    .input-incorrect { border-color: hsl(var(--destructive)) !important; background: hsl(var(--destructive) / 0.06) !important; box-shadow: 0 0 0 1px hsl(var(--destructive) / 0.3) !important; }
+    .correct-answer-text { color: hsl(0 70% 45%); font-size: 0.875rem; font-weight: 600; margin-top: 0.5rem; display: flex; align-items: center; gap: 0.375rem; }
+    .dark .correct-answer-text { color: hsl(0 60% 60%); }
+
+    /* Completion */
+    .completion-icon { width: 5rem; height: 5rem; border-radius: 50%; background: hsl(45 100% 93%); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: hsl(45 90% 45%); }
+    .dark .completion-icon { background: hsl(45 60% 15%); }
+
+    /* ===== STEPPER ===== */
+    .stepper { display: flex; align-items: center; margin-bottom: 2rem; }
+    .stepper-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      cursor: pointer; user-select: none; padding: 0.5rem 0;
+    }
+    .stepper-connector {
+      flex: 1; height: 2px; min-width: 0.5rem;
+      background: hsl(var(--border)); transition: background 0.2s;
+      margin: 0 0.25rem;
+    }
+    .stepper-connector.completed { background: hsl(var(--primary)); }
+    .stepper-circle {
+      flex-shrink: 0; width: 2rem; height: 2rem;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; font-size: 0.8125rem; font-weight: 700;
+      border: 2px solid hsl(var(--border));
+      background: hsl(var(--background)); color: hsl(var(--muted-foreground));
+      transition: all 0.2s;
+    }
+    .stepper-item.active .stepper-circle {
+      border-color: hsl(var(--primary)); background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
+    }
+    .stepper-item.completed .stepper-circle {
+      border-color: hsl(var(--primary)); background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+    .stepper-label {
+      font-size: 0.75rem; font-weight: 500;
+      color: hsl(var(--muted-foreground)); white-space: nowrap;
+      transition: color 0.2s;
+    }
+    .stepper-item.active .stepper-label,
+    .stepper-item.completed .stepper-label { color: hsl(var(--foreground)); font-weight: 600; }
+    .filter-step { display: none; animation: fadeIn 0.2s ease; }
+    .filter-step.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .step-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid hsl(var(--border)); gap: 0.5rem; }
+    .step-count-badge {
+      display: inline-flex; align-items: center; gap: 0.375rem;
+      font-size: 0.8125rem; font-weight: 600;
+      padding: 0.375rem 0.875rem; border-radius: 9999px;
+      background: hsl(var(--muted)); color: hsl(var(--muted-foreground));
+    }
+    .step-count-badge .count { color: hsl(var(--foreground)); font-weight: 700; }
+
+    @media (max-width: 640px) {
+      .card-padded { padding: 1.25rem; }
+      .option-card { padding: 0.875rem 1rem; }
+      .navbar { padding: 0.75rem 1rem; }
+      .stepper-label { display: none; }
+    }
   </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 min-h-screen transition-colors duration-200 antialiased font-sans">
+
+<body>
 
   <!-- Navbar -->
-  <nav class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-    <div class="font-bold tracking-tight text-lg flex items-center gap-2">
+  <nav class="navbar">
+    <div class="navbar-brand" style="cursor: pointer;" onclick="window.location.href = window.location.pathname">
       <i data-lucide="book-open-check"></i>
       BSA Quizzer
     </div>
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-2">
-        <div id="seed-badge-container" class="hidden items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-50 bg-slate-100 dark:bg-slate-800 w-8 h-8 rounded-full cursor-pointer transition-colors" onclick="navigator.clipboard.writeText(window.currentSeedString); alert('seed copied to clipboard')" title="Copy current seed">
-          <i data-lucide="hash" class="w-4 h-4"></i>
-        </div>
-        <div id="stats-badge" class="hidden text-sm font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
-          Score: <span id="score-text" class="text-slate-900 dark:text-slate-50 font-bold">0/0</span>
-        </div>
+    <div class="navbar-actions">
+      <div id="seed-badge-container" class="seed-badge" onclick="navigator.clipboard.writeText(window.location.href); alert('Link with seed copied to clipboard!')" title="Copy link with seed">
+        <i data-lucide="hash" class="w-4 h-4" style="width:16px;height:16px"></i>
       </div>
-      <button id="theme-toggle" class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-        <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
-        <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+      <div id="stats-badge" class="stats-badge">
+        Score: <span id="score-text" class="score-value">0/0</span>
+      </div>
+      <button id="theme-toggle" class="theme-btn">
+        <i data-lucide="moon" class="icon-moon" style="width:20px;height:20px"></i>
+        <i data-lucide="sun" class="icon-sun" style="width:20px;height:20px"></i>
       </button>
     </div>
   </nav>
 
   <!-- Setup Screen -->
-  <main id="setup-screen" class="flex flex-col items-center justify-center min-h-[80vh] px-4">
-    <div id="setup-content" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-      <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-900 dark:text-slate-50">
-        <i data-lucide="folder-archive" class="w-8 h-8"></i>
+  <main id="setup-screen" class="screen-center">
+    <div id="setup-content" class="card card-padded text-center max-w-md">
+      <div class="icon-container">
+        <i data-lucide="folder-archive" style="width:32px;height:32px"></i>
       </div>
-      <h1 class="text-2xl font-bold tracking-tight mb-2">Load your Vault</h1>
-      <p class="text-slate-500 dark:text-slate-400 text-sm mb-8">Select the folder containing your Markdown question files to begin your quiz session.</p>
-      
-      <label class="relative cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none ring-offset-background bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90 h-10 py-2 px-8 w-full shadow-sm">
-        <i data-lucide="folder-search" class="w-4 h-4 mr-2"></i>
+      <h1 style="font-size:1.5rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.5rem">Load your Vault</h1>
+      <p class="text-muted text-sm mb-6">Select the folder containing your Markdown question files to begin your quiz session.</p>
+
+      <label class="btn btn-primary btn-full" style="cursor:pointer;position:relative">
+        <i data-lucide="folder-search" style="width:16px;height:16px"></i>
         Choose Directory
-        <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden" accept=".md" />
+        <input type="file" id="folder-input" webkitdirectory directory multiple style="display:none" accept=".md" />
       </label>
-      <p class="text-xs text-slate-400 mt-4">Safe to select the entire Obsidian vault. It will ignore README.md and only process valid items.</p>
+      <p class="text-xs text-muted mt-4">Safe to select the entire Obsidian vault. It will ignore README.md and only process valid items.</p>
     </div>
 
-    <div id="loading-content" class="hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 dark:border-slate-50 mx-auto mb-6"></div>
-      <h1 class="text-2xl font-bold tracking-tight mb-2">Loading Repository...</h1>
-      <p class="text-slate-500 dark:text-slate-400 text-sm">Automatically fetching questions from GitHub Pages.</p>
+    <div id="loading-content" class="card card-padded text-center max-w-md hidden">
+      <div class="spinner animate-spin"></div>
+      <h1 style="font-size:1.5rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.5rem">Loading Repository...</h1>
+      <p class="text-muted text-sm">Automatically fetching questions from GitHub Pages.</p>
     </div>
   </main>
 
   <!-- Filter Screen -->
-  <main id="filter-screen" class="hidden flex-col items-center justify-center min-h-[80vh] px-4 py-8">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-sm max-w-2xl w-full">
-      <div class="flex items-center gap-3 mb-8">
-        <i data-lucide="filter" class="w-6 h-6 text-slate-400"></i>
-        <h2 class="text-2xl font-bold tracking-tight">Filter Questions</h2>
+  <main id="filter-screen" class="screen-center hidden">
+    <div class="card card-padded max-w-2xl">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem">
+        <i data-lucide="filter" style="width:24px;height:24px;color:hsl(var(--muted-foreground))"></i>
+        <h2 style="font-size:1.5rem;font-weight:700;letter-spacing:-0.02em">Filter Questions</h2>
       </div>
-      
-      <div class="space-y-8">
+      <p class="text-muted text-sm mb-6">Narrow down your quiz by selecting filters step-by-step.</p>
+
+      <!-- Stepper (built dynamically by JS) -->
+      <div class="stepper" id="filter-stepper"></div>
+
+      <!-- Step: Subjects -->
+      <div class="filter-step" data-step-group="subjects-group">
         <div id="subjects-group" class="filter-group"></div>
-        <div id="courses-group" class="filter-group"></div>
-        <div id="topics-group" class="filter-group"></div>
-        <div id="types-group" class="filter-group"></div>
-        <div id="diffs-group" class="filter-group"></div>
-        <div id="tags-group" class="filter-group"></div>
-      </div>
-      
-      <div class="mt-10 pt-6 border-t border-slate-100 dark:border-slate-800">
-        <div class="mb-6">
-           <label class="block text-sm font-bold tracking-wider text-slate-500 dark:text-slate-400 mb-2 uppercase">Custom Seed</label>
-           <input type="text" id="seed-input" class="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-50 outline-none transition-all shadow-sm text-sm" placeholder="Leave blank to generate a random seed">
-           <p class="text-xs text-slate-400 mt-2">Entering a valid seed will override your filter selections above to load that specific set of questions.</p>
+        <div class="step-nav">
+          <div></div>
+          <div class="step-count-badge scb"><span class="count">0</span>&nbsp;questions match</div>
+          <button class="btn btn-primary step-next" onclick="stepNext()">Next <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
         </div>
-        <button id="start-quiz-btn" class="w-full inline-flex items-center justify-center rounded-md font-medium transition-colors h-12 px-8 bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90 text-base">
+      </div>
+
+      <!-- Step: Courses -->
+      <div class="filter-step" data-step-group="courses-group">
+        <div id="courses-group" class="filter-group"></div>
+        <div class="step-nav">
+          <button class="btn btn-outline step-back" onclick="stepBack()"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</button>
+          <div class="step-count-badge scb"><span class="count">0</span>&nbsp;questions match</div>
+          <button class="btn btn-primary step-next" onclick="stepNext()">Next <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
+        </div>
+      </div>
+
+      <!-- Step: Topics -->
+      <div class="filter-step" data-step-group="topics-group">
+        <div id="topics-group" class="filter-group"></div>
+        <div class="step-nav">
+          <button class="btn btn-outline step-back" onclick="stepBack()"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</button>
+          <div class="step-count-badge scb"><span class="count">0</span>&nbsp;questions match</div>
+          <button class="btn btn-primary step-next" onclick="stepNext()">Next <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
+        </div>
+      </div>
+
+      <!-- Step: Question Types -->
+      <div class="filter-step" data-step-group="types-group">
+        <div id="types-group" class="filter-group"></div>
+        <div class="step-nav">
+          <button class="btn btn-outline step-back" onclick="stepBack()"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</button>
+          <div class="step-count-badge scb"><span class="count">0</span>&nbsp;questions match</div>
+          <button class="btn btn-primary step-next" onclick="stepNext()">Next <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
+        </div>
+      </div>
+
+      <!-- Step: Difficulty -->
+      <div class="filter-step" data-step-group="diffs-group">
+        <div id="diffs-group" class="filter-group"></div>
+        <div class="step-nav">
+          <button class="btn btn-outline step-back" onclick="stepBack()"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</button>
+          <div class="step-count-badge scb"><span class="count">0</span>&nbsp;questions match</div>
+          <button class="btn btn-primary step-next" onclick="stepNext()">Next <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
+        </div>
+      </div>
+
+      <!-- Step: Tags -->
+      <div class="filter-step" data-step-group="tags-group">
+        <div id="tags-group" class="filter-group"></div>
+        <div class="step-nav">
+          <button class="btn btn-outline step-back" onclick="stepBack()"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</button>
+          <div class="step-count-badge scb"><span class="count">0</span>&nbsp;questions match</div>
+          <div></div>
+        </div>
+      </div>
+
+      <!-- Seed + Start (always visible) -->
+      <div class="section-divider">
+        <div class="mb-6">
+          <label class="filter-section-title" style="display:block">Custom Seed</label>
+          <input type="text" id="seed-input" class="input" placeholder="Leave blank to generate a random seed">
+          <p class="text-xs text-muted mt-2">Entering a valid seed will override your filter selections to load that specific set of questions.</p>
+        </div>
+        <button id="start-quiz-btn" class="btn btn-primary btn-lg btn-full">
           Start Quiz Session
         </button>
+        <div style="text-align:center;margin-top:0.75rem">
+          <span id="final-count" class="step-count-badge"><span class="count">0</span>&nbsp;questions ready</span>
+        </div>
       </div>
+
     </div>
   </main>
 
   <!-- Quiz Screen -->
-  <main id="quiz-screen" class="hidden w-full max-w-4xl mx-auto pt-8 pb-20 px-4">
-    <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
-      <div class="text-sm font-medium text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg shadow-sm" id="progress-text">Question 1 of 10</div>
-      <div class="flex gap-2 items-center flex-wrap">
-        <span id="file-badge" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white text-slate-700 dark:bg-slate-900 dark:text-slate-300 flex items-center gap-1.5 shadow-sm max-w-[200px] truncate" title="">
-          <i data-lucide="file-text" class="w-3.5 h-3.5 flex-shrink-0"></i> <span id="file-name-text" class="truncate"></span>
+  <main id="quiz-screen" class="screen-quiz hidden">
+    <div class="quiz-header">
+      <div class="badge" id="progress-text">Question 1 of 10</div>
+      <div class="badge-row">
+        <span id="file-badge" class="badge badge-file" title="">
+          <i data-lucide="file-text" style="width:14px;height:14px;flex-shrink:0"></i>
+          <span id="file-name-text" class="badge-text"></span>
         </span>
-        <span id="diff-badge" class="px-2.5 py-1 text-xs font-semibold rounded-lg border shadow-sm"></span>
+        <span id="diff-badge" class="badge"></span>
       </div>
     </div>
-    
-    <!-- Problem Context (For Multi-Questions) -->
-    <div id="problem-container" class="mb-6 p-6 sm:p-8 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hidden">
-      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
-        <i data-lucide="layout-template" class="w-4 h-4"></i> Context / Scenario
+
+    <!-- Problem Context -->
+    <div id="problem-container" class="problem-block hidden">
+      <h3 class="problem-header">
+        <i data-lucide="layout-template" style="width:16px;height:16px"></i> Context / Scenario
       </h3>
-      <div id="problem-text" class="prose dark:prose-invert prose-slate max-w-none prose-sm sm:prose-base"></div>
+      <div id="problem-text" class="prose"></div>
     </div>
-    
+
     <!-- Active Question Card -->
-    <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 sm:p-8">
-      <div id="question-text" class="prose dark:prose-invert prose-slate max-w-none mb-8 text-lg font-medium leading-relaxed"></div>
-      
-      <div id="options-container" class="space-y-3">
+    <div class="card card-padded">
+      <div id="question-text" class="prose" style="margin-bottom:2rem;font-size:1.0625rem;font-weight:500;line-height:1.7"></div>
+
+      <div id="options-container">
         <!-- Options injected here -->
       </div>
-      
+
       <!-- Actions -->
-      <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-        <button id="check-btn" disabled class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-6 bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+      <div class="actions-bar">
+        <button id="check-btn" disabled class="btn btn-primary">
           Check Answer
         </button>
-        <button id="next-btn" class="hidden inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-6 border border-slate-200 bg-white hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-800 dark:hover:text-slate-50 ml-auto shadow-sm">
-          Next Question <i data-lucide="arrow-right" class="w-4 h-4 ml-2"></i>
+        <button id="next-btn" class="btn btn-outline hidden ml-auto">
+          Next Question <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
         </button>
       </div>
-      
+
       <!-- Solution Block -->
-      <div id="solution-container" class="mt-8 hidden animate-in fade-in slide-in-from-top-4 duration-300">
-        <h3 class="text-lg font-semibold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
-          <i data-lucide="lightbulb" class="w-5 h-5 text-amber-500"></i> Solution
-        </h3>
-        <div id="solution-text" class="prose dark:prose-invert prose-slate max-w-none p-5 sm:p-6 bg-amber-50/50 dark:bg-slate-900/50 rounded-xl border border-amber-100 dark:border-slate-800"></div>
+      <div id="solution-container" class="hidden" style="margin-top:2rem">
+        <div class="solution-block">
+          <h3 class="solution-header">
+            <i data-lucide="lightbulb" class="icon" style="width:20px;height:20px"></i> Solution
+          </h3>
+          <div id="solution-text" class="prose"></div>
+        </div>
       </div>
     </div>
   </main>
 
   <script>
-    // Initialize marked options
     marked.setOptions({ gfm: true, breaks: true });
     lucide.createIcons();
 
-    // Theme Toggle Logic
     const themeToggle = document.getElementById('theme-toggle');
     themeToggle.addEventListener('click', () => {
       document.documentElement.classList.toggle('dark');
       localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
     });
 
-    // Global State
     let allParsedItems = [];
     let quizItems = [];
     let currentIndex = 0;
@@ -215,44 +655,29 @@
     let showingSolution = false;
     let correctCount = 0;
 
-    // Markdown Parser Functions
     function parseMarkdown(content) {
-      // Normalize line endings
       content = content.replace(/\r\n/g, '\n');
-      
-      // Split by possible frontmatter start to handle multiple questions per file
       const chunks = content.split(/(?=^---\n[a-zA-Z0-9_-]+:)/gm);
       const results = [];
-      
       for (let chunk of chunks) {
         if (!chunk.trim()) continue;
-        
         const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
         const match = chunk.match(frontmatterRegex);
         let metadata = {};
         let body = chunk;
-        
         if (match) {
-          try { 
-            metadata = jsyaml.load(match[1]); 
-            if (typeof metadata !== 'object' || metadata === null) metadata = {};
-          } catch (e) { 
-            // fallback
-          }
+          try { metadata = jsyaml.load(match[1]); if (typeof metadata !== 'object' || metadata === null) metadata = {}; } catch (e) {}
           body = chunk.slice(match[0].length);
         }
-        
         let problem = "";
         let questions = [];
-        
         if (metadata.type === "multi_question" || metadata.type === "multi_supply_answer") {
           const problemRegex = /# Problem\n([\s\S]*?)(?=## Question \d+)/i;
           const problemMatch = body.match(problemRegex);
           if (problemMatch) problem = problemMatch[1];
-          
           const qParts = body.split(/## Question \d+/i).slice(1);
           qParts.forEach((part, idx) => {
-             const correctOpt = Array.isArray(metadata.correct_options) ? metadata.correct_options[idx] : 
+             const correctOpt = Array.isArray(metadata.correct_options) ? metadata.correct_options[idx] :
                                 (Array.isArray(metadata.correct_answers) ? metadata.correct_answers[idx] : null);
              const qData = parseQuestionBlock(part, correctOpt, metadata.type);
              if(qData) questions.push(qData);
@@ -262,16 +687,11 @@
           const qData = parseQuestionBlock(body, correct, metadata.type);
           if (qData) questions.push(qData);
         } else {
-          // Fallback for files without standard frontmatter type
           const qData = parseQuestionBlock(body, metadata.correct_option, metadata.type);
           if (qData && (qData.options.length > 0 || qData.isSupply)) questions.push(qData);
         }
-        
-        if (questions.length > 0) {
-          results.push({ metadata, problem, questions });
-        }
+        if (questions.length > 0) { results.push({ metadata, problem, questions }); }
       }
-      
       return results;
     }
 
@@ -279,281 +699,305 @@
        let qText = text;
        let optionsText = "";
        let solutionText = "";
-       
        const optionsSplit = text.split(/### Options|## Options/i);
        if (optionsSplit.length > 1) {
          qText = optionsSplit[0];
          const solSplit = optionsSplit[1].split(/>\s*\[!(?:success|info|note)\][+-]?\s*(?:Solution|Answer|Explanation)/i);
          optionsText = solSplit[0];
-         if (solSplit.length > 1) {
-            solutionText = solSplit[1].replace(/^>\s?/gm, ''); // Strip blockquotes
-         }
+         if (solSplit.length > 1) { solutionText = solSplit[1].replace(/^>\s?/gm, ''); }
        } else {
          const solSplit = text.split(/>\s*\[!(?:success|info|note)\][+-]?\s*(?:Solution|Answer|Explanation)/i);
          qText = solSplit[0];
-         if (solSplit.length > 1) {
-            solutionText = solSplit[1].replace(/^>\s?/gm, '');
-         }
+         if (solSplit.length > 1) { solutionText = solSplit[1].replace(/^>\s?/gm, ''); }
        }
-       
-       const optionRegex = /- \[ \]\s*(?:([A-D])[\.\)]\s+)?(.*)/gi;
+       const optionRegex = /- \[ \]\s*(?:([A-D])[\.\\)]\s+)?(.*)/gi;
        let options = [];
        let match;
        while ((match = optionRegex.exec(optionsText)) !== null) {
           let letter = match[1] ? match[1].toUpperCase() : match[2].trim().charAt(0).toUpperCase();
           options.push({ letter: letter, text: match[2].trim() });
        }
-       
        const isSupply = type === 'supply_answer' || type === 'multi_supply_answer';
        if (options.length === 0 && !isSupply) return null;
-       
        let cleanedCorrect = correctOption ? correctOption.toString().trim() : null;
        if (!isSupply && cleanedCorrect) {
           if (cleanedCorrect.toLowerCase() === 'true') cleanedCorrect = 'T';
           else if (cleanedCorrect.toLowerCase() === 'false') cleanedCorrect = 'F';
           else cleanedCorrect = cleanedCorrect.toUpperCase();
        }
-       
-       return {
-          text: qText.trim(),
-          options: options,
-          solution: solutionText.trim(),
-          correctOption: cleanedCorrect,
-          isSupply: isSupply
-       };
+       return { text: qText.trim(), options: options, solution: solutionText.trim(), correctOption: cleanedCorrect, isSupply: isSupply };
     }
 
-    // Upload & Filter Logic
     document.getElementById('folder-input').addEventListener('change', async (e) => {
       const files = Array.from(e.target.files).filter(f => f.name.endsWith('.md') && f.name.toLowerCase() !== 'readme.md');
       if (files.length === 0) return alert('No valid Markdown files found (ignoring README.md).');
-      
       allParsedItems = [];
-      const tagSet = new Set();
-      const diffSet = new Set();
-      const typeSet = new Set();
-      const subjectSet = new Set();
-      const courseSet = new Set();
-      const topicSet = new Set();
-      
-      // Parse all files
+      const tagSet = new Set(), diffSet = new Set(), typeSet = new Set(), subjectSet = new Set(), courseSet = new Set(), topicSet = new Set();
       for (let file of files) {
         try {
           const text = await file.text();
           const parsedArray = parseMarkdown(text);
-          
           const pathParts = file.webkitRelativePath ? file.webkitRelativePath.split('/').slice(1, -1) : [];
           const subject = pathParts[0] || 'No Subject';
           const course = pathParts[1] || 'No Course';
           const topic = pathParts[2] || 'No Topic';
-          
-          if (parsedArray.length > 0) {
-              subjectSet.add(subject);
-              courseSet.add(course);
-              topicSet.add(topic);
-          }
-          
+          if (parsedArray.length > 0) { subjectSet.add(subject); courseSet.add(course); topicSet.add(topic); }
           parsedArray.forEach(parsed => {
             const type = parsed.metadata.type || 'unknown';
             const diff = parsed.metadata.difficulty || 'unknown';
-            typeSet.add(type);
-            diffSet.add(diff);
+            typeSet.add(type); diffSet.add(diff);
             if (parsed.metadata.tags) {
               const tagsArray = Array.isArray(parsed.metadata.tags) ? parsed.metadata.tags : [parsed.metadata.tags];
               tagsArray.forEach(t => tagSet.add(t));
             }
-            
             parsed.questions.forEach((q) => {
-              allParsedItems.push({
-                hash: hashString((q.text || '') + (q.options ? q.options.map(o=>o.text).join('') : '')),
-                fileName: file.name,
-                subject: subject,
-                course: course,
-                topic: topic,
-                metadata: parsed.metadata,
-                problem: parsed.problem,
-                question: q
-              });
+              allParsedItems.push({ hash: hashString((q.text || '') + (q.options ? q.options.map(o=>o.text).join('') : '')), fileName: file.name, subject, course, topic, metadata: parsed.metadata, problem: parsed.problem, question: q });
             });
           });
-        } catch (err) {
-          console.warn(`Error processing file ${file.name}:`, err);
-        }
+        } catch (err) { console.warn(`Error processing file ${file.name}:`, err); }
       }
-      
       if (allParsedItems.length === 0) return alert("No questions found in the provided vault.");
-
-      // Render filter screen
       document.getElementById('setup-screen').classList.add('hidden');
       document.getElementById('filter-screen').classList.remove('hidden');
-      document.getElementById('filter-screen').style.display = 'flex'; // Tailwind flex
-      
-      if (subjectSet.size > 1 || (subjectSet.size === 1 && !subjectSet.has('No Subject'))) {
-          renderCheckboxGroup('subjects-group', 'Subjects', Array.from(subjectSet).sort());
-      }
-      if (courseSet.size > 1 || (courseSet.size === 1 && !courseSet.has('No Course'))) {
-          renderCheckboxGroup('courses-group', 'Courses', Array.from(courseSet).sort());
-      }
-      if (topicSet.size > 1 || (topicSet.size === 1 && !topicSet.has('No Topic'))) {
-          renderCheckboxGroup('topics-group', 'Topics', Array.from(topicSet).sort());
-      }
-      renderCheckboxGroup('types-group', 'Question Types', Array.from(typeSet).sort());
-      renderCheckboxGroup('diffs-group', 'Difficulty Levels', Array.from(diffSet).sort());
-      renderCheckboxGroup('tags-group', 'Tags', Array.from(tagSet).sort());
-      
-      updateFiltersVisibility();
+      document.getElementById('filter-screen').style.display = 'flex';
+      initFilterScreen(subjectSet, courseSet, topicSet, typeSet, diffSet, tagSet);
     });
 
     function renderCheckboxGroup(containerId, title, items) {
       const container = document.getElementById(containerId);
-      let html = `<h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">${title}</h3><div class="flex flex-wrap gap-2 sm:gap-3">`;
-      
-      // "All" option
-      html += `
-         <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 dark:border-slate-700 dark:bg-slate-800/50 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm select-none">
-           <input type="checkbox" class="filter-cb ${containerId}-cb w-4 h-4 rounded border-gray-300" value="ALL" checked onchange="toggleAll('${containerId}', this.checked)">
-           <span class="text-sm font-medium">All</span>
-         </label>
-      `;
-      
+      let html = `<h3 class="filter-section-title">${title}</h3><div class="filter-items">`;
+      html += `<label class="filter-label"><input type="checkbox" class="filter-cb ${containerId}-cb" value="ALL" checked onchange="toggleAll('${containerId}', this.checked)"><span class="label-text-bold">All</span></label>`;
       items.forEach(item => {
-        html += `
-         <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 dark:border-slate-700 dark:bg-slate-800/50 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm select-none">
-           <input type="checkbox" class="filter-cb ${containerId}-cb w-4 h-4 rounded border-gray-300" value="${item}" checked onchange="uncheckAll('${containerId}')">
-           <span class="text-sm">${item}</span>
-         </label>
-        `;
+        html += `<label class="filter-label"><input type="checkbox" class="filter-cb ${containerId}-cb" value="${item}" checked onchange="uncheckAll('${containerId}')"><span class="label-text">${item}</span></label>`;
       });
-      
       html += `</div>`;
       container.innerHTML = html;
     }
 
     window.toggleAll = (groupId, isChecked) => {
-       document.querySelectorAll(`.${groupId}-cb`).forEach(cb => { 
+       document.querySelectorAll(`.${groupId}-cb`).forEach(cb => {
           if (cb.value !== 'ALL') {
-              if (cb.closest('label').style.display !== 'none') {
-                  cb.checked = isChecked;
-              } else {
-                  cb.checked = false;
-              }
+              if (cb.closest('label').style.display !== 'none') { cb.checked = isChecked; } else { cb.checked = false; }
           }
        });
-       if (['subjects-group', 'courses-group', 'topics-group'].includes(groupId)) {
-           updateFiltersVisibility();
-       }
+       updateFiltersVisibility();
+       updateStepCounts();
     };
-    
+
     window.uncheckAll = (groupId) => {
        const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
        const cbs = Array.from(document.querySelectorAll(`.${groupId}-cb`)).filter(cb => cb.value !== 'ALL');
        const visibleCbs = cbs.filter(cb => cb.closest('label').style.display !== 'none');
-       
        const anyUnchecked = visibleCbs.some(cb => !cb.checked);
        if (anyUnchecked && allCb) allCb.checked = false;
-       
        const allChecked = visibleCbs.every(cb => cb.checked);
        if (allChecked && visibleCbs.length > 0 && allCb) allCb.checked = true;
-       
-       if (['subjects-group', 'courses-group', 'topics-group'].includes(groupId)) {
-           updateFiltersVisibility();
-       }
+       updateFiltersVisibility();
+       updateStepCounts();
     };
+
+    /* ===== STEP WIZARD ===== */
+    const allStepDefs = [
+      { groupId: 'subjects-group', label: 'Subject' },
+      { groupId: 'courses-group', label: 'Course' },
+      { groupId: 'topics-group', label: 'Topic' },
+      { groupId: 'types-group', label: 'Type' },
+      { groupId: 'diffs-group', label: 'Difficulty' },
+      { groupId: 'tags-group', label: 'Tags' },
+    ];
+    let activeSteps = [];
+    let currentStepIdx = 0;
+
+    function initFilterScreen(subjectSet, courseSet, topicSet, typeSet, diffSet, tagSet) {
+      if (subjectSet.size > 1 || (subjectSet.size === 1 && !subjectSet.has('No Subject'))) renderCheckboxGroup('subjects-group', 'Subjects', Array.from(subjectSet).sort());
+      if (courseSet.size > 1 || (courseSet.size === 1 && !courseSet.has('No Course'))) renderCheckboxGroup('courses-group', 'Courses', Array.from(courseSet).sort());
+      if (topicSet.size > 1 || (topicSet.size === 1 && !topicSet.has('No Topic'))) renderCheckboxGroup('topics-group', 'Topics', Array.from(topicSet).sort());
+      renderCheckboxGroup('types-group', 'Question Types', Array.from(typeSet).sort());
+      renderCheckboxGroup('diffs-group', 'Difficulty Levels', Array.from(diffSet).sort());
+      renderCheckboxGroup('tags-group', 'Tags', Array.from(tagSet).sort());
+      buildStepper();
+      updateFiltersVisibility();
+      updateStepCounts();
+      navigateToStep(0);
+      checkUrlForSeed();
+    }
+
+    function buildStepper() {
+      activeSteps = allStepDefs.filter(s => {
+        const el = document.getElementById(s.groupId);
+        return el && el.innerHTML.trim();
+      });
+      const stepper = document.getElementById('filter-stepper');
+      let html = '';
+      activeSteps.forEach((step, i) => {
+        if (i > 0) html += `<div class="stepper-connector" data-cidx="${i}"></div>`;
+        html += `<div class="stepper-item" data-sidx="${i}" onclick="navigateToStep(${i})">
+          <div class="stepper-circle">${i + 1}</div>
+          <span class="stepper-label">${step.label}</span>
+        </div>`;
+      });
+      stepper.innerHTML = html;
+    }
+
+    function navigateToStep(idx) {
+      if (idx < 0 || idx >= activeSteps.length) return;
+      currentStepIdx = idx;
+      const activeGroupId = activeSteps[idx].groupId;
+      document.querySelectorAll('.filter-step').forEach(el => el.classList.remove('active'));
+      const target = document.querySelector(`.filter-step[data-step-group="${activeGroupId}"]`);
+      if (target) target.classList.add('active');
+      document.querySelectorAll('.stepper-item').forEach(el => {
+        const s = parseInt(el.dataset.sidx);
+        el.classList.remove('active', 'completed');
+        if (s === idx) el.classList.add('active');
+        else if (s < idx) el.classList.add('completed');
+      });
+      document.querySelectorAll('.stepper-connector').forEach(el => {
+        const c = parseInt(el.dataset.cidx);
+        el.classList.toggle('completed', c <= idx);
+      });
+      updateFiltersVisibility();
+      updateStepCounts();
+      lucide.createIcons();
+    }
+
+    // old goToStep calls still work (stepper click)
+    window.goToStep = navigateToStep;
+
+    window.stepNext = () => {
+      if (currentStepIdx < activeSteps.length - 1) {
+        const valid = validateCurrentStep();
+        if (valid) navigateToStep(currentStepIdx + 1);
+      }
+    };
+    window.stepBack = () => {
+      if (currentStepIdx > 0) navigateToStep(currentStepIdx - 1);
+    };
+
+    function validateCurrentStep() {
+      const groupId = activeSteps[currentStepIdx].groupId;
+      const container = document.getElementById(groupId);
+      if (!container || !container.innerHTML.trim()) return true;
+      const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
+      if (allCb && allCb.checked) return true;
+      const cbs = Array.from(document.querySelectorAll(`.${groupId}-cb`)).filter(cb => cb.value !== 'ALL');
+      const visibleChecked = cbs.filter(cb => cb.checked && cb.closest('label').style.display !== 'none');
+      if (visibleChecked.length > 0) return true;
+      alert(`Please select at least one ${activeSteps[currentStepIdx].label.toLowerCase()} before continuing.`);
+      return false;
+    }
+
+    function getSelectedForGroup(groupId) {
+      const container = document.getElementById(groupId);
+      if (!container || !container.innerHTML.trim()) return ['ALL'];
+      const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
+      if (allCb && allCb.checked) return ['ALL'];
+      const cbs = document.querySelectorAll(`.${groupId}-cb`);
+      const vals = Array.from(cbs).filter(cb => cb.checked && cb.value !== 'ALL' && cb.closest('label').style.display !== 'none').map(cb => cb.value);
+      return vals;
+    }
+
+    function getFilteredCount() {
+      const ss = getSelectedForGroup('subjects-group'), sc = getSelectedForGroup('courses-group'), st = getSelectedForGroup('topics-group');
+      const sty = getSelectedForGroup('types-group'), sd = getSelectedForGroup('diffs-group'), sta = getSelectedForGroup('tags-group');
+      const groups = [
+        { id: 'subjects-group', val: ss }, { id: 'courses-group', val: sc }, { id: 'topics-group', val: st },
+        { id: 'types-group', val: sty }, { id: 'diffs-group', val: sd }, { id: 'tags-group', val: sta }
+      ];
+      for (const g of groups) {
+        const container = document.getElementById(g.id);
+        if (container && container.innerHTML.trim() && g.val.length === 0) return 0;
+      }
+      return allParsedItems.filter(item => {
+        const t = item.metadata.type || 'unknown', d = item.metadata.difficulty || 'unknown';
+        const rawTags = item.metadata.tags || ['unknown'];
+        const itemTags = Array.isArray(rawTags) ? rawTags : [rawTags];
+        return (ss.includes('ALL') || ss.includes(item.subject))
+          && (sc.includes('ALL') || sc.includes(item.course))
+          && (st.includes('ALL') || st.includes(item.topic))
+          && (sty.includes('ALL') || sty.includes(t))
+          && (sd.includes('ALL') || sd.includes(d))
+          && (sta.includes('ALL') || itemTags.some(tag => sta.includes(tag)));
+      }).length;
+    }
+
+    function updateStepCounts() {
+      const count = getFilteredCount();
+      const label = count === 1 ? 'question' : 'questions';
+      document.querySelectorAll('.scb .count').forEach(el => el.textContent = count);
+      const finalCount = document.getElementById('final-count');
+      if (finalCount) finalCount.innerHTML = `<span class="count">${count}</span>&nbsp;${label} ready`;
+    }
+
+    function cascadeGroup(cbSelector, availableSet) {
+      document.querySelectorAll(cbSelector).forEach(cb => {
+        if (cb.value === 'ALL') return;
+        const label = cb.closest('label');
+        if (availableSet.has(cb.value)) {
+          if (label.style.display === 'none') { label.style.display = ''; cb.checked = true; }
+        } else {
+          label.style.display = 'none'; cb.checked = false;
+        }
+      });
+    }
 
     function updateFiltersVisibility() {
         const getSelected = (groupId) => {
+            const container = document.getElementById(groupId);
+            if (!container || !container.innerHTML) return ['ALL'];
             const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
             if (allCb && allCb.checked) return ['ALL'];
             const cbs = document.querySelectorAll(`.${groupId}-cb`);
             return Array.from(cbs).filter(cb => cb.checked && cb.value !== 'ALL' && cb.closest('label').style.display !== 'none').map(cb => cb.value);
         };
+        const selSubj = getSelected('subjects-group');
 
-        const selSubj = document.getElementById('subjects-group').innerHTML ? getSelected('subjects-group') : ['ALL'];
-        
+        // subjects → courses
         const availableCourses = new Set();
-        allParsedItems.forEach(item => {
-            const subjMatch = selSubj.includes('ALL') || selSubj.includes(item.subject);
-            if (subjMatch) availableCourses.add(item.course);
-        });
-        
-        const coursesGroup = document.getElementById('courses-group');
-        if (coursesGroup && coursesGroup.innerHTML) {
-            let anyVisible = false;
-            document.querySelectorAll('.courses-group-cb').forEach(cb => {
-                if (cb.value === 'ALL') return;
-                const label = cb.closest('label');
-                if (availableCourses.has(cb.value)) {
-                    label.style.display = '';
-                    anyVisible = true;
-                } else {
-                    label.style.display = 'none';
-                    if (cb.checked) cb.checked = false;
-                }
-            });
-            coursesGroup.style.display = anyVisible ? '' : 'none';
-        }
-
+        allParsedItems.forEach(item => { if (selSubj.includes('ALL') || selSubj.includes(item.subject)) availableCourses.add(item.course); });
+        cascadeGroup('.courses-group-cb', availableCourses);
         updateAllCheckbox('courses-group');
 
-        const selCourse = document.getElementById('courses-group').innerHTML ? getSelected('courses-group') : ['ALL'];
-        
+        // subjects + courses → topics
+        const selCourse = getSelected('courses-group');
         const availableTopics = new Set();
         allParsedItems.forEach(item => {
-            const subjMatch = selSubj.includes('ALL') || selSubj.includes(item.subject);
-            const courseMatch = selCourse.includes('ALL') || selCourse.includes(item.course);
-            if (subjMatch && courseMatch) availableTopics.add(item.topic);
+            if ((selSubj.includes('ALL') || selSubj.includes(item.subject)) && (selCourse.includes('ALL') || selCourse.includes(item.course)))
+              availableTopics.add(item.topic);
         });
-
-        const topicsGroup = document.getElementById('topics-group');
-        if (topicsGroup && topicsGroup.innerHTML) {
-            let anyVisible = false;
-            document.querySelectorAll('.topics-group-cb').forEach(cb => {
-                if (cb.value === 'ALL') return;
-                const label = cb.closest('label');
-                if (availableTopics.has(cb.value)) {
-                    label.style.display = '';
-                    anyVisible = true;
-                } else {
-                    label.style.display = 'none';
-                    if (cb.checked) cb.checked = false;
-                }
-            });
-            topicsGroup.style.display = anyVisible ? '' : 'none';
-        }
-
+        cascadeGroup('.topics-group-cb', availableTopics);
         updateAllCheckbox('topics-group');
 
-        const selTopic = document.getElementById('topics-group').innerHTML ? getSelected('topics-group') : ['ALL'];
-        
+        // scope → types
+        const selTopic = getSelected('topics-group');
+        const scopeItems = allParsedItems.filter(item => {
+            return (selSubj.includes('ALL') || selSubj.includes(item.subject))
+              && (selCourse.includes('ALL') || selCourse.includes(item.course))
+              && (selTopic.includes('ALL') || selTopic.includes(item.topic));
+        });
+        const availableTypes = new Set();
+        scopeItems.forEach(item => availableTypes.add(item.metadata.type || 'unknown'));
+        cascadeGroup('.types-group-cb', availableTypes);
+        updateAllCheckbox('types-group');
+
+        // scope + types → difficulty
+        const selType = getSelected('types-group');
+        const scopeTypeItems = scopeItems.filter(item => selType.includes('ALL') || selType.includes(item.metadata.type || 'unknown'));
+        const availableDiffs = new Set();
+        scopeTypeItems.forEach(item => availableDiffs.add(item.metadata.difficulty || 'unknown'));
+        cascadeGroup('.diffs-group-cb', availableDiffs);
+        updateAllCheckbox('diffs-group');
+
+        // scope + types + difficulty → tags
+        const selDiff = getSelected('diffs-group');
         const availableTags = new Set();
-        allParsedItems.forEach(item => {
-            const subjMatch = selSubj.includes('ALL') || selSubj.includes(item.subject);
-            const courseMatch = selCourse.includes('ALL') || selCourse.includes(item.course);
-            const topicMatch = selTopic.includes('ALL') || selTopic.includes(item.topic);
-            if (subjMatch && courseMatch && topicMatch) {
+        scopeTypeItems.forEach(item => {
+            if (selDiff.includes('ALL') || selDiff.includes(item.metadata.difficulty || 'unknown')) {
                 const rawTags = item.metadata.tags || [];
-                const itemTags = Array.isArray(rawTags) ? rawTags : [rawTags];
-                itemTags.forEach(t => availableTags.add(t));
+                (Array.isArray(rawTags) ? rawTags : [rawTags]).forEach(t => availableTags.add(t));
             }
         });
-
-        const tagsGroup = document.getElementById('tags-group');
-        if (tagsGroup && tagsGroup.innerHTML) {
-            let anyVisible = false;
-            document.querySelectorAll('.tags-group-cb').forEach(cb => {
-                if (cb.value === 'ALL') return;
-                const label = cb.closest('label');
-                if (availableTags.has(cb.value)) {
-                    label.style.display = '';
-                    anyVisible = true;
-                } else {
-                    label.style.display = 'none';
-                    if (cb.checked) cb.checked = false;
-                }
-            });
-            tagsGroup.style.display = anyVisible ? '' : 'none';
-        }
-
+        cascadeGroup('.tags-group-cb', availableTags);
         updateAllCheckbox('tags-group');
     }
 
@@ -562,59 +1006,18 @@
         if (!allCb) return;
         const cbs = Array.from(document.querySelectorAll(`.${groupId}-cb`)).filter(cb => cb.value !== 'ALL');
         const visibleCbs = cbs.filter(cb => cb.closest('label').style.display !== 'none');
-        
-        if (visibleCbs.length === 0) {
-            allCb.checked = false;
-            allCb.closest('label').style.display = 'none';
-        } else {
-            allCb.closest('label').style.display = '';
-            const allChecked = visibleCbs.every(cb => cb.checked);
-            allCb.checked = allChecked;
-        }
+        if (visibleCbs.length === 0) { allCb.checked = false; allCb.closest('label').style.display = 'none'; }
+        else { allCb.closest('label').style.display = ''; allCb.checked = visibleCbs.every(cb => cb.checked); }
     }
 
-    // PRNG and Seed Logic
     function mulberry32(a) {
-        return function() {
-          var t = a += 0x6D2B79F5;
-          t = Math.imul(t ^ t >>> 15, t | 1);
-          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-          return ((t ^ t >>> 14) >>> 0) / 4294967296;
-        }
+        return function() { var t = a += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }
     }
+    function shuffleArray(array, rng) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } }
+    function hashString(str) { let hash = 5381; for (let i = 0; i < str.length; i++) { hash = ((hash << 5) + hash) + str.charCodeAt(i); } return (hash >>> 0).toString(36).padStart(7, '0'); }
+    function encodeSeed(filters, hashes, rng) { const obj = { f: filters, q: hashes, r: rng }; return 'BSA-' + btoa(encodeURIComponent(JSON.stringify(obj))).replace(/=/g, ''); }
+    function decodeSeed(str) { if (!str.startsWith('BSA-')) return null; try { let b64 = str.substring(4); while (b64.length % 4 !== 0) b64 += '='; return JSON.parse(decodeURIComponent(atob(b64))); } catch(e) { return null; } }
 
-    function shuffleArray(array, rng) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(rng() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-    }
-
-    function hashString(str) {
-        let hash = 5381;
-        for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        }
-        return (hash >>> 0).toString(36).padStart(7, '0');
-    }
-
-    function encodeSeed(filters, hashes, rng) {
-        const obj = { f: filters, q: hashes, r: rng };
-        return 'BSA-' + btoa(encodeURIComponent(JSON.stringify(obj))).replace(/=/g, '');
-    }
-
-    function decodeSeed(str) {
-        if (!str.startsWith('BSA-')) return null;
-        try {
-            let b64 = str.substring(4);
-            while (b64.length % 4 !== 0) b64 += '=';
-            return JSON.parse(decodeURIComponent(atob(b64)));
-        } catch(e) {
-            return null;
-        }
-    }
-
-    // Start Quiz
     document.getElementById('start-quiz-btn').addEventListener('click', () => {
       const getSelected = (groupId) => {
           const cbs = document.querySelectorAll(`.${groupId}-cb`);
@@ -638,18 +1041,16 @@
               exactSeedDecoded = true;
               
               if (decoded.q) {
-                  // Freeze to exact questions from the generated seed
                   const hashSet = new Set();
                   if (typeof decoded.q === 'string') {
                       for (let i = 0; i < decoded.q.length; i += 7) {
                           hashSet.add(decoded.q.substring(i, i + 7));
                       }
-                  } else if (Array.isArray(decoded.q)) { // fallback for any previously array-based seeds
+                  } else if (Array.isArray(decoded.q)) {
                       decoded.q.forEach(h => hashSet.add(h));
                   }
                   quizItems = allParsedItems.filter(item => hashSet.has(item.hash));
               } else {
-                  // Fallback for older seeds (if any)
                   selectedSubjects = decoded.f.s;
                   selectedCourses = decoded.f.c;
                   selectedTopics = decoded.f.to;
@@ -674,7 +1075,6 @@
                   });
               }
           } else {
-              // Custom text seed with current filter selections
               isCustomStringSeed = true;
           }
       }
@@ -724,21 +1124,19 @@
       
       if (quizItems.length === 0) return alert('No questions from this seed could be found in your current vault.');
       
-      // Shuffle using PRNG
       const rng = mulberry32(rngSeedValue);
       quizItems.sort((a, b) => (a.fileName + a.question.text).localeCompare(b.fileName + b.question.text));
       shuffleArray(quizItems, rng);
       
-      // Display the seed
-      document.getElementById('seed-badge-container').classList.remove('hidden');
-      document.getElementById('seed-badge-container').classList.add('flex');
-      lucide.createIcons();
+      document.getElementById('seed-badge-container').style.display = 'flex';
+      document.getElementById('stats-badge').style.display = 'inline-flex';
       
-      // Hide filter, show quiz
       document.getElementById('filter-screen').classList.add('hidden');
-      document.getElementById('filter-screen').style.display = 'none';
       document.getElementById('quiz-screen').classList.remove('hidden');
-      document.getElementById('stats-badge').classList.remove('hidden');
+
+      const url = new URL(window.location);
+      url.searchParams.set('seed', window.currentSeedString);
+      window.history.replaceState({}, '', url);
       
       currentIndex = 0;
       correctCount = 0;
@@ -751,7 +1149,6 @@
        document.getElementById('score-text').innerText = `${correctCount}/${quizItems.length}`;
     }
 
-    // Render Question
     function renderQuestion() {
       const item = quizItems[currentIndex];
       selectedLetter = null;
@@ -765,15 +1162,14 @@
       const diff = (item.metadata.difficulty || 'unknown').toLowerCase();
       diffBadge.innerText = diff.toUpperCase();
       
-      const baseBadgeClasses = 'px-2.5 py-1 text-xs font-semibold rounded-lg border shadow-sm ';
       if (diff === 'hard') {
-        diffBadge.className = baseBadgeClasses + 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50';
+        diffBadge.className = 'badge badge-hard';
       } else if (diff === 'medium') {
-        diffBadge.className = baseBadgeClasses + 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50';
+        diffBadge.className = 'badge badge-medium';
       } else if (diff === 'easy') {
-        diffBadge.className = baseBadgeClasses + 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50';
+        diffBadge.className = 'badge badge-easy';
       } else {
-        diffBadge.className = baseBadgeClasses + 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+        diffBadge.className = 'badge';
       }
       
       const probContainer = document.getElementById('problem-container');
@@ -792,9 +1188,9 @@
       
       if (item.question.isSupply) {
          optsContainer.innerHTML = `
-            <div class="mt-4">
-               <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Your Answer</label>
-               <input type="text" id="supply-input" class="w-full sm:max-w-md px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-50 outline-none transition-all shadow-sm" placeholder="Type your answer here..." autocomplete="off">
+            <div style="margin-top:1rem">
+               <label style="display:block;font-size:0.875rem;font-weight:500;margin-bottom:0.5rem">Your Answer</label>
+               <input type="text" id="supply-input" class="input" placeholder="Type your answer here..." autocomplete="off">
             </div>
          `;
          const supplyInput = document.getElementById('supply-input');
@@ -810,14 +1206,12 @@
       } else {
          item.question.options.forEach(opt => {
            const div = document.createElement('div');
-           div.className = 'option-card border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50 flex items-start gap-4 transition-all bg-white dark:bg-slate-950 shadow-sm';
+           div.className = 'option-card';
            div.onclick = () => selectOption(opt.letter, div);
            
            div.innerHTML = `
-             <div class="flex-shrink-0 w-8 h-8 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center mt-0.5 text-sm font-bold letter-circle transition-all">
-               ${opt.letter}
-             </div>
-             <div class="prose dark:prose-invert prose-slate max-w-none pt-1 flex-1">${marked.parseInline(opt.text)}</div>
+             <div class="letter-circle">${opt.letter}</div>
+             <div class="prose option-text">${marked.parseInline(opt.text)}</div>
            `;
            optsContainer.appendChild(div);
          });
@@ -835,21 +1229,12 @@
 
     function selectOption(letter, element) {
       if (showingSolution) return; 
-      
       selectedLetter = letter;
       
       document.querySelectorAll('.option-card').forEach(el => {
-        el.classList.remove('ring-2', 'ring-slate-900', 'dark:ring-slate-50', 'border-slate-900', 'dark:border-slate-50', 'bg-slate-50', 'dark:bg-slate-900');
-        const circle = el.querySelector('.letter-circle');
-        circle.classList.remove('bg-slate-900', 'text-white', 'border-slate-900', 'dark:bg-slate-50', 'dark:text-slate-900');
-        circle.classList.add('border-slate-200', 'dark:border-slate-700');
+        el.classList.remove('selected');
       });
-      
-      element.classList.add('ring-2', 'ring-slate-900', 'dark:ring-slate-50', 'border-slate-900', 'dark:border-slate-50', 'bg-slate-50', 'dark:bg-slate-900');
-      const activeCircle = element.querySelector('.letter-circle');
-      activeCircle.classList.add('bg-slate-900', 'text-white', 'border-slate-900', 'dark:bg-slate-50', 'dark:text-slate-900');
-      activeCircle.classList.remove('border-slate-200', 'dark:border-slate-700');
-      
+      element.classList.add('selected');
       document.getElementById('check-btn').disabled = false;
     }
 
@@ -861,36 +1246,31 @@
       const correct = item.question.correctOption;
       
       if (item.question.isSupply) {
+         const supplyInput = document.getElementById('supply-input');
          if (selectedLetter.toLowerCase() === correct.toLowerCase()) {
              correctCount++;
-             document.getElementById('supply-input').classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/20', 'ring-1', 'ring-emerald-500');
+             supplyInput.classList.add('input-correct');
          } else {
-             document.getElementById('supply-input').classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-950/20', 'ring-1', 'ring-red-500');
+             supplyInput.classList.add('input-incorrect');
              const p = document.createElement('p');
-             p.className = "text-red-600 dark:text-red-400 mt-2 text-sm font-semibold flex items-center gap-1.5";
-             p.innerHTML = `<i data-lucide="x-circle" class="w-4 h-4"></i> Correct answer: ${correct}`;
-             document.getElementById('supply-input').parentNode.appendChild(p);
+             p.className = "correct-answer-text";
+             p.innerHTML = `<i data-lucide="x-circle" style="width:16px;height:16px"></i> Correct answer: ${correct}`;
+             supplyInput.parentNode.appendChild(p);
          }
-         document.getElementById('supply-input').disabled = true;
+         supplyInput.disabled = true;
       } else {
          if (selectedLetter === correct) correctCount++;
          
          document.querySelectorAll('.option-card').forEach(el => {
            const letter = el.querySelector('.letter-circle').innerText.trim();
-           const circle = el.querySelector('.letter-circle');
-           
-           el.classList.remove('ring-2', 'ring-slate-900', 'dark:ring-slate-50', 'border-slate-900', 'dark:border-slate-50');
+           el.classList.remove('selected');
            
            if (letter === correct) {
-             el.classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/20', 'ring-1', 'ring-emerald-500');
-             circle.classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
-             circle.classList.remove('bg-slate-900', 'dark:bg-slate-50', 'text-slate-900', 'border-slate-200', 'dark:border-slate-700');
+             el.classList.add('correct');
            } else if (letter === selectedLetter && selectedLetter !== correct) {
-             el.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-950/20', 'ring-1', 'ring-red-500');
-             circle.classList.add('bg-red-500', 'text-white', 'border-red-500');
-             circle.classList.remove('bg-slate-900', 'dark:bg-slate-50', 'text-slate-900', 'border-slate-200', 'dark:border-slate-700');
+             el.classList.add('incorrect');
            } else {
-             el.classList.add('opacity-40');
+             el.classList.add('dimmed');
            }
          });
       }
@@ -905,10 +1285,10 @@
       solText.innerHTML = marked.parse(rawSolution);
       document.getElementById('solution-container').classList.remove('hidden');
       
-      // Auto scroll to solution
       setTimeout(() => {
         document.getElementById('solution-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 100);
+      lucide.createIcons();
     });
 
     document.getElementById('next-btn').addEventListener('click', () => {
@@ -918,16 +1298,16 @@
       } else {
         const percentage = Math.round((correctCount / quizItems.length) * 100);
         document.getElementById('question-text').innerHTML = `
-          <div class="text-center py-12">
-            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-500 mb-6">
-               <i data-lucide="award" class="w-10 h-10"></i>
+          <div style="text-align:center;padding:3rem 0;">
+            <div class="completion-icon">
+               <i data-lucide="award" style="width:40px;height:40px"></i>
             </div>
-            <h2 class="text-3xl font-bold mb-3">Session Complete!</h2>
-            <p class="text-slate-500 dark:text-slate-400 text-lg max-w-sm mx-auto">You scored <span class="font-bold text-slate-900 dark:text-slate-100">${correctCount}</span> out of <span class="font-bold text-slate-900 dark:text-slate-100">${quizItems.length}</span> questions correctly (${percentage}%).</p>
+            <h2 style="font-size:1.875rem;font-weight:700;letter-spacing:-0.02em;margin-bottom:0.75rem">Session Complete!</h2>
+            <p class="text-muted" style="font-size:1.125rem;max-width:24rem;margin:0 auto">You scored <span style="font-weight:700;color:hsl(var(--foreground))">${correctCount}</span> out of <span style="font-weight:700;color:hsl(var(--foreground))">${quizItems.length}</span> questions correctly (${percentage}%).</p>
             
-            <div class="mt-10 flex gap-4 justify-center">
-              <button onclick="location.reload()" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-6 bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90 shadow-sm">
-                <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Start Over
+            <div style="margin-top:2.5rem;display:flex;justify-content:center;gap:1rem">
+              <button onclick="window.location.href = window.location.pathname" class="btn btn-primary">
+                <i data-lucide="rotate-ccw" style="width:16px;height:16px"></i> Start Over
               </button>
             </div>
           </div>
@@ -940,7 +1320,15 @@
       }
     });
 
-    // Auto-fetch from GitHub Pages
+    function checkUrlForSeed() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const seedParam = urlParams.get('seed');
+        if (seedParam) {
+            document.getElementById('seed-input').value = seedParam;
+            document.getElementById('start-quiz-btn').click();
+        }
+    }
+
     async function initGitHubPages() {
       const hostname = window.location.hostname;
       if (!hostname.endsWith('.github.io')) return;
@@ -964,12 +1352,7 @@
         const mdFiles = treeData.tree.filter(f => f.path.endsWith('.md') && !f.path.toLowerCase().endsWith('readme.md'));
 
         allParsedItems = [];
-        const tagSet = new Set();
-        const diffSet = new Set();
-        const typeSet = new Set();
-        const subjectSet = new Set();
-        const courseSet = new Set();
-        const topicSet = new Set();
+        const tagSet = new Set(), diffSet = new Set(), typeSet = new Set(), subjectSet = new Set(), courseSet = new Set(), topicSet = new Set();
 
         const fetchPromises = mdFiles.map(async (file) => {
             const rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/${branch}/${file.path}`;
@@ -978,23 +1361,17 @@
                 if (res.ok) {
                     const text = await res.text();
                     const parsedArray = parseMarkdown(text);
-                    
                     const pathParts = file.path ? file.path.split('/').slice(0, -1) : [];
                     const subject = pathParts[0] || 'No Subject';
                     const course = pathParts[1] || 'No Course';
                     const topic = pathParts[2] || 'No Topic';
 
-                    if (parsedArray.length > 0) {
-                        subjectSet.add(subject);
-                        courseSet.add(course);
-                        topicSet.add(topic);
-                    }
+                    if (parsedArray.length > 0) { subjectSet.add(subject); courseSet.add(course); topicSet.add(topic); }
                     
                     parsedArray.forEach(parsed => {
                         const type = parsed.metadata.type || 'unknown';
                         const diff = parsed.metadata.difficulty || 'unknown';
-                        typeSet.add(type);
-                        diffSet.add(diff);
+                        typeSet.add(type); diffSet.add(diff);
                         if (parsed.metadata.tags) {
                             const tagsArray = Array.isArray(parsed.metadata.tags) ? parsed.metadata.tags : [parsed.metadata.tags];
                             tagsArray.forEach(t => tagSet.add(t));
@@ -1004,9 +1381,7 @@
                             allParsedItems.push({
                                 hash: hashString((q.text || '') + (q.options ? q.options.map(o=>o.text).join('') : '')),
                                 fileName: file.path.split('/').pop(),
-                                subject: subject,
-                                course: course,
-                                topic: topic,
+                                subject, course, topic,
                                 metadata: parsed.metadata,
                                 problem: parsed.problem,
                                 question: q
@@ -1014,35 +1389,16 @@
                         });
                     });
                 }
-            } catch (err) {
-                console.warn(`Error fetching ${file.path}:`, err);
-            }
+            } catch (err) { console.warn(`Error fetching ${file.path}:`, err); }
         });
 
         await Promise.all(fetchPromises);
-
-        if (allParsedItems.length === 0) {
-            throw new Error("No questions found in the GitHub repository.");
-        }
+        if (allParsedItems.length === 0) throw new Error("No questions found in the GitHub repository.");
 
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('filter-screen').classList.remove('hidden');
-        document.getElementById('filter-screen').style.display = 'flex';
         
-        if (subjectSet.size > 1 || (subjectSet.size === 1 && !subjectSet.has('No Subject'))) {
-            renderCheckboxGroup('subjects-group', 'Subjects', Array.from(subjectSet).sort());
-        }
-        if (courseSet.size > 1 || (courseSet.size === 1 && !courseSet.has('No Course'))) {
-            renderCheckboxGroup('courses-group', 'Courses', Array.from(courseSet).sort());
-        }
-        if (topicSet.size > 1 || (topicSet.size === 1 && !topicSet.has('No Topic'))) {
-            renderCheckboxGroup('topics-group', 'Topics', Array.from(topicSet).sort());
-        }
-        renderCheckboxGroup('types-group', 'Question Types', Array.from(typeSet).sort());
-        renderCheckboxGroup('diffs-group', 'Difficulty Levels', Array.from(diffSet).sort());
-        renderCheckboxGroup('tags-group', 'Tags', Array.from(tagSet).sort());
-        
-        updateFiltersVisibility();
+        initFilterScreen(subjectSet, courseSet, topicSet, typeSet, diffSet, tagSet);
 
       } catch (error) {
         console.error("GitHub Auto-fetch failed:", error);
@@ -1051,7 +1407,6 @@
       }
     }
 
-    // Run on load
     initGitHubPages();
   </script>
 </body>
