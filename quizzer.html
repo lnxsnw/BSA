@@ -710,7 +710,7 @@
          qText = solSplit[0];
          if (solSplit.length > 1) { solutionText = solSplit[1].replace(/^>\s?/gm, ''); }
        }
-       const optionRegex = /- \[ \]\s*(?:([A-D])[\.\\)]\s+)?(.*)/gi;
+       const optionRegex = /- \[ \]\s*(?:([A-Z])[\.\\)]\s+)?(.*)/gi;
        let options = [];
        let match;
        while ((match = optionRegex.exec(optionsText)) !== null) {
