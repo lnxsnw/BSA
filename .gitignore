@@ -9,3 +9,7 @@
 
 # Track .gitignore itself
 !.gitignore
+
+# Track the Quizzer Application and its dependencies
+!quizzer.html
+!0 - Other BSA Stuff/0.00 - Quizzer Files/*

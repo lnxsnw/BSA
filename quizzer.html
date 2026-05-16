@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BSA Quizzer</title>
+  
+  <!-- Local Scripts -->
+  <script src="0 - Other BSA Stuff/0.00 - Quizzer Files/tailwind.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          typography: {
+            DEFAULT: {
+              css: {
+                maxWidth: 'none',
+                color: 'inherit',
+                a: { color: 'inherit' },
+                strong: { color: 'inherit' },
+                th: { color: 'inherit' },
+                td: { color: 'inherit' },
+                h1: { color: 'inherit' },
+                h2: { color: 'inherit' },
+                h3: { color: 'inherit' },
+                h4: { color: 'inherit' },
+                code: { color: 'inherit' },
+              },
+            },
+          },
+        }
+      }
+    }
+  </script>
+  
+  <!-- Local Dependencies -->
+  <script src="0 - Other BSA Stuff/0.00 - Quizzer Files/marked.min.js"></script>
+  <script src="0 - Other BSA Stuff/0.00 - Quizzer Files/js-yaml.min.js"></script>
+  <script src="0 - Other BSA Stuff/0.00 - Quizzer Files/lucide.min.js"></script>
+  
+  <script>
+    // Theme auto-selection based on browser settings
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .dark ::-webkit-scrollbar-thumb { background: #334155; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    /* Table Styling overrides for markdown prose */
+    .prose table { border-collapse: collapse; width: 100%; margin-top: 1rem; margin-bottom: 1rem; }
+    .prose th, .prose td { border: 1px solid #e2e8f0; padding: 0.5rem; }
+    .dark .prose th, .dark .prose td { border-color: #1e293b; }
+    .prose th { background-color: #f8fafc; font-weight: 600; text-align: left; }
+    .dark .prose th { background-color: #0f172a; }
+
+    /* Hide standard checkboxes for custom styling */
+    .filter-cb { accent-color: #0f172a; }
+    .dark .filter-cb { accent-color: #f8fafc; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 min-h-screen transition-colors duration-200 antialiased font-sans">
+
+  <!-- Navbar -->
+  <nav class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+    <div class="font-bold tracking-tight text-lg flex items-center gap-2">
+      <i data-lucide="book-open-check"></i>
+      BSA Quizzer
+    </div>
+    <div class="flex items-center gap-4">
+      <div id="stats-badge" class="hidden text-sm font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
+        Score: <span id="score-text" class="text-slate-900 dark:text-slate-50 font-bold">0/0</span>
+      </div>
+      <button id="theme-toggle" class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+        <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+        <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Setup Screen -->
+  <main id="setup-screen" class="flex flex-col items-center justify-center min-h-[80vh] px-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
+      <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-900 dark:text-slate-50">
+        <i data-lucide="folder-archive" class="w-8 h-8"></i>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight mb-2">Load your Vault</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-sm mb-8">Select the folder containing your Markdown question files to begin your quiz session.</p>
+      
+      <label class="relative cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none ring-offset-background bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90 h-10 py-2 px-8 w-full shadow-sm">
+        <i data-lucide="folder-search" class="w-4 h-4 mr-2"></i>
+        Choose Directory
+        <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden" accept=".md" />
+      </label>
+      <p class="text-xs text-slate-400 mt-4">Safe to select the entire Obsidian vault. It will ignore README.md and only process valid items.</p>
+    </div>
+  </main>
+
+  <!-- Filter Screen -->
+  <main id="filter-screen" class="hidden flex-col items-center justify-center min-h-[80vh] px-4 py-8">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-2xl shadow-sm max-w-2xl w-full">
+      <div class="flex items-center gap-3 mb-8">
+        <i data-lucide="filter" class="w-6 h-6 text-slate-400"></i>
+        <h2 class="text-2xl font-bold tracking-tight">Filter Questions</h2>
+      </div>
+      
+      <div class="space-y-8">
+        <div id="types-group" class="filter-group"></div>
+        <div id="diffs-group" class="filter-group"></div>
+        <div id="tags-group" class="filter-group"></div>
+      </div>
+      
+      <div class="mt-10 pt-6 border-t border-slate-100 dark:border-slate-800">
+        <button id="start-quiz-btn" class="w-full inline-flex items-center justify-center rounded-md font-medium transition-colors h-12 px-8 bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90 text-base">
+          Start Quiz Session
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Quiz Screen -->
+  <main id="quiz-screen" class="hidden w-full max-w-4xl mx-auto pt-8 pb-20 px-4">
+    <div class="flex justify-between items-center mb-6 flex-wrap gap-4">
+      <div class="text-sm font-medium text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg shadow-sm" id="progress-text">Question 1 of 10</div>
+      <div class="flex gap-2 items-center flex-wrap">
+        <span id="file-badge" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white text-slate-700 dark:bg-slate-900 dark:text-slate-300 flex items-center gap-1.5 shadow-sm max-w-[200px] truncate" title="">
+          <i data-lucide="file-text" class="w-3.5 h-3.5 flex-shrink-0"></i> <span id="file-name-text" class="truncate"></span>
+        </span>
+        <span id="diff-badge" class="px-2.5 py-1 text-xs font-semibold rounded-lg border shadow-sm"></span>
+      </div>
+    </div>
+    
+    <!-- Problem Context (For Multi-Questions) -->
+    <div id="problem-container" class="mb-6 p-6 sm:p-8 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hidden">
+      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-2">
+        <i data-lucide="layout-template" class="w-4 h-4"></i> Context / Scenario
+      </h3>
+      <div id="problem-text" class="prose dark:prose-invert prose-slate max-w-none prose-sm sm:prose-base"></div>
+    </div>
+    
+    <!-- Active Question Card -->
+    <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 sm:p-8">
+      <div id="question-text" class="prose dark:prose-invert prose-slate max-w-none mb-8 text-lg font-medium leading-relaxed"></div>
+      
+      <div id="options-container" class="space-y-3">
+        <!-- Options injected here -->
+      </div>
+      
+      <!-- Actions -->
+      <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <button id="check-btn" disabled class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-6 bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+          Check Answer
+        </button>
+        <button id="next-btn" class="hidden inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-6 border border-slate-200 bg-white hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-800 dark:hover:text-slate-50 ml-auto shadow-sm">
+          Next Question <i data-lucide="arrow-right" class="w-4 h-4 ml-2"></i>
+        </button>
+      </div>
+      
+      <!-- Solution Block -->
+      <div id="solution-container" class="mt-8 hidden animate-in fade-in slide-in-from-top-4 duration-300">
+        <h3 class="text-lg font-semibold flex items-center gap-2 mb-4 text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
+          <i data-lucide="lightbulb" class="w-5 h-5 text-amber-500"></i> Solution
+        </h3>
+        <div id="solution-text" class="prose dark:prose-invert prose-slate max-w-none p-5 sm:p-6 bg-amber-50/50 dark:bg-slate-900/50 rounded-xl border border-amber-100 dark:border-slate-800"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Initialize marked options
+    marked.setOptions({ gfm: true, breaks: true });
+    lucide.createIcons();
+
+    // Theme Toggle Logic
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      localStorage.theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    });
+
+    // Global State
+    let allParsedItems = [];
+    let quizItems = [];
+    let currentIndex = 0;
+    let selectedLetter = null;
+    let showingSolution = false;
+    let correctCount = 0;
+
+    // Markdown Parser Functions
+    function parseMarkdown(content) {
+      const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
+      const match = content.match(frontmatterRegex);
+      let metadata = {};
+      let body = content;
+      
+      if (match) {
+        try { metadata = jsyaml.load(match[1]); } catch (e) { return null; }
+        body = content.slice(match[0].length);
+      }
+      
+      let problem = "";
+      let questions = [];
+      
+      if (metadata.type === "multi_question") {
+        const problemRegex = /# Problem\n([\s\S]*?)(?=## Question \d+)/i;
+        const problemMatch = body.match(problemRegex);
+        if (problemMatch) problem = problemMatch[1];
+        
+        const qParts = body.split(/## Question \d+/i).slice(1);
+        qParts.forEach((part, idx) => {
+           const correctOpt = Array.isArray(metadata.correct_options) ? metadata.correct_options[idx] : null;
+           const qData = parseQuestionBlock(part, correctOpt);
+           if(qData) questions.push(qData);
+        });
+      } else if (metadata.type === "question" || metadata.type === "lesson") {
+        const qData = parseQuestionBlock(body, metadata.correct_option);
+        if (qData) questions.push(qData);
+      } else {
+        // Fallback for files without standard frontmatter type, but we read them all as requested
+        const qData = parseQuestionBlock(body, metadata.correct_option);
+        if (qData && qData.options.length > 0) questions.push(qData);
+      }
+      
+      return { metadata, problem, questions };
+    }
+
+    function parseQuestionBlock(text, correctOption) {
+       let qText = text;
+       let optionsText = "";
+       let solutionText = "";
+       
+       const optionsSplit = text.split(/### Options|## Options/i);
+       if (optionsSplit.length > 1) {
+         qText = optionsSplit[0];
+         const solSplit = optionsSplit[1].split(/>\s*\[!(?:success|info|note)\][+-]?\s*(?:Solution|Answer|Explanation)/i);
+         optionsText = solSplit[0];
+         if (solSplit.length > 1) {
+            solutionText = solSplit[1].replace(/^>\s?/gm, ''); // Strip blockquotes
+         }
+       }
+       
+       const optionRegex = /- \[ \] ([A-D])[\.\)]\s*(.*)/g;
+       let options = [];
+       let match;
+       while ((match = optionRegex.exec(optionsText)) !== null) {
+          options.push({ letter: match[1].toUpperCase(), text: match[2].trim() });
+       }
+       
+       if (options.length === 0) return null;
+       
+       return {
+          text: qText.trim(),
+          options: options,
+          solution: solutionText.trim(),
+          correctOption: correctOption ? correctOption.toString().trim().toUpperCase() : null
+       };
+    }
+
+    // Upload & Filter Logic
+    document.getElementById('folder-input').addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files).filter(f => f.name.endsWith('.md') && f.name.toLowerCase() !== 'readme.md');
+      if (files.length === 0) return alert('No valid Markdown files found (ignoring README.md).');
+      
+      allParsedItems = [];
+      const tagSet = new Set();
+      const diffSet = new Set();
+      const typeSet = new Set();
+      
+      // Parse all files
+      for (let file of files) {
+        try {
+          const text = await file.text();
+          const parsed = parseMarkdown(text);
+          
+          if (parsed && parsed.questions.length > 0) {
+            const type = parsed.metadata.type || 'unknown';
+            const diff = parsed.metadata.difficulty || 'unknown';
+            typeSet.add(type);
+            diffSet.add(diff);
+            if (parsed.metadata.tags) {
+              const tagsArray = Array.isArray(parsed.metadata.tags) ? parsed.metadata.tags : [parsed.metadata.tags];
+              tagsArray.forEach(t => tagSet.add(t));
+            }
+            
+            parsed.questions.forEach((q) => {
+              allParsedItems.push({
+                fileName: file.name,
+                metadata: parsed.metadata,
+                problem: parsed.problem,
+                question: q
+              });
+            });
+          }
+        } catch (err) {
+          console.warn(`Error processing file ${file.name}:`, err);
+        }
+      }
+      
+      if (allParsedItems.length === 0) return alert("No questions found in the provided vault.");
+
+      // Render filter screen
+      document.getElementById('setup-screen').classList.add('hidden');
+      document.getElementById('filter-screen').classList.remove('hidden');
+      document.getElementById('filter-screen').style.display = 'flex'; // Tailwind flex
+      
+      renderCheckboxGroup('types-group', 'Question Types', Array.from(typeSet).sort());
+      renderCheckboxGroup('diffs-group', 'Difficulty Levels', Array.from(diffSet).sort());
+      renderCheckboxGroup('tags-group', 'Tags', Array.from(tagSet).sort());
+    });
+
+    function renderCheckboxGroup(containerId, title, items) {
+      const container = document.getElementById(containerId);
+      let html = `<h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">${title}</h3><div class="flex flex-wrap gap-2 sm:gap-3">`;
+      
+      // "All" option
+      html += `
+         <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 dark:border-slate-700 dark:bg-slate-800/50 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm select-none">
+           <input type="checkbox" class="filter-cb ${containerId}-cb w-4 h-4 rounded border-gray-300" value="ALL" checked onchange="toggleAll('${containerId}', this.checked)">
+           <span class="text-sm font-medium">All</span>
+         </label>
+      `;
+      
+      items.forEach(item => {
+        html += `
+         <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 dark:border-slate-700 dark:bg-slate-800/50 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-sm select-none">
+           <input type="checkbox" class="filter-cb ${containerId}-cb w-4 h-4 rounded border-gray-300" value="${item}" checked onchange="uncheckAll('${containerId}')">
+           <span class="text-sm">${item}</span>
+         </label>
+        `;
+      });
+      
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    window.toggleAll = (groupId, isChecked) => {
+       if (isChecked) {
+          document.querySelectorAll(`.${groupId}-cb`).forEach(cb => { if(cb.value !== 'ALL') cb.checked = true; });
+       }
+    };
+    
+    window.uncheckAll = (groupId) => {
+       const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
+       const anyUnchecked = Array.from(document.querySelectorAll(`.${groupId}-cb`)).some(cb => cb.value !== 'ALL' && !cb.checked);
+       if (anyUnchecked && allCb) allCb.checked = false;
+       
+       const allChecked = Array.from(document.querySelectorAll(`.${groupId}-cb`)).filter(cb => cb.value !== 'ALL').every(cb => cb.checked);
+       if (allChecked && allCb) allCb.checked = true;
+    };
+
+    // Start Quiz
+    document.getElementById('start-quiz-btn').addEventListener('click', () => {
+      const getSelected = (groupId) => {
+          const cbs = document.querySelectorAll(`.${groupId}-cb`);
+          const allCb = document.querySelector(`.${groupId}-cb[value="ALL"]`);
+          if (allCb && allCb.checked) return ['ALL'];
+          return Array.from(cbs).filter(cb => cb.checked && cb.value !== 'ALL').map(cb => cb.value);
+      };
+
+      const selectedTypes = getSelected('types-group');
+      const selectedDiffs = getSelected('diffs-group');
+      const selectedTags = getSelected('tags-group');
+      
+      quizItems = allParsedItems.filter(item => {
+          const t = item.metadata.type || 'unknown';
+          const d = item.metadata.difficulty || 'unknown';
+          const rawTags = item.metadata.tags || ['unknown'];
+          const itemTags = Array.isArray(rawTags) ? rawTags : [rawTags];
+          
+          const typeMatch = selectedTypes.includes('ALL') || selectedTypes.includes(t);
+          const diffMatch = selectedDiffs.includes('ALL') || selectedDiffs.includes(d);
+          const tagMatch = selectedTags.includes('ALL') || itemTags.some(tag => selectedTags.includes(tag));
+          
+          return typeMatch && diffMatch && tagMatch;
+      });
+      
+      if (quizItems.length === 0) return alert('No questions match your current filter selections!');
+      
+      // Hide filter, show quiz
+      document.getElementById('filter-screen').classList.add('hidden');
+      document.getElementById('filter-screen').style.display = 'none';
+      document.getElementById('quiz-screen').classList.remove('hidden');
+      document.getElementById('stats-badge').classList.remove('hidden');
+      
+      currentIndex = 0;
+      correctCount = 0;
+      updateScore();
+      renderQuestion();
+    });
+
+    function updateScore() {
+       document.getElementById('score-text').innerText = `${correctCount}/${currentIndex + (showingSolution ? 1 : 0)}`;
+    }
+
+    // Render Question
+    function renderQuestion() {
+      const item = quizItems[currentIndex];
+      selectedLetter = null;
+      showingSolution = false;
+      
+      document.getElementById('progress-text').innerText = `Question ${currentIndex + 1} of ${quizItems.length}`;
+      document.getElementById('file-name-text').innerText = item.fileName;
+      document.getElementById('file-badge').title = item.fileName;
+      
+      const diffBadge = document.getElementById('diff-badge');
+      const diff = (item.metadata.difficulty || 'unknown').toLowerCase();
+      diffBadge.innerText = diff.toUpperCase();
+      
+      const baseBadgeClasses = 'px-2.5 py-1 text-xs font-semibold rounded-lg border shadow-sm ';
+      if (diff === 'hard') {
+        diffBadge.className = baseBadgeClasses + 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50';
+      } else if (diff === 'medium') {
+        diffBadge.className = baseBadgeClasses + 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50';
+      } else if (diff === 'easy') {
+        diffBadge.className = baseBadgeClasses + 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50';
+      } else {
+        diffBadge.className = baseBadgeClasses + 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+      }
+      
+      const probContainer = document.getElementById('problem-container');
+      const probText = document.getElementById('problem-text');
+      if (item.problem) {
+        probText.innerHTML = marked.parse(item.problem);
+        probContainer.classList.remove('hidden');
+      } else {
+        probContainer.classList.add('hidden');
+      }
+      
+      document.getElementById('question-text').innerHTML = marked.parse(item.question.text);
+      
+      const optsContainer = document.getElementById('options-container');
+      optsContainer.innerHTML = '';
+      
+      item.question.options.forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'option-card border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50 flex items-start gap-4 transition-all bg-white dark:bg-slate-950 shadow-sm';
+        div.onclick = () => selectOption(opt.letter, div);
+        
+        div.innerHTML = `
+          <div class="flex-shrink-0 w-8 h-8 rounded-full border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center mt-0.5 text-sm font-bold letter-circle transition-all">
+            ${opt.letter}
+          </div>
+          <div class="prose dark:prose-invert prose-slate max-w-none pt-1 flex-1">${marked.parseInline(opt.text)}</div>
+        `;
+        optsContainer.appendChild(div);
+      });
+      
+      document.getElementById('solution-container').classList.add('hidden');
+      const checkBtn = document.getElementById('check-btn');
+      checkBtn.classList.remove('hidden');
+      checkBtn.disabled = true;
+      document.getElementById('next-btn').classList.add('hidden');
+      
+      lucide.createIcons();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function selectOption(letter, element) {
+      if (showingSolution) return; 
+      
+      selectedLetter = letter;
+      
+      document.querySelectorAll('.option-card').forEach(el => {
+        el.classList.remove('ring-2', 'ring-slate-900', 'dark:ring-slate-50', 'border-slate-900', 'dark:border-slate-50', 'bg-slate-50', 'dark:bg-slate-900');
+        const circle = el.querySelector('.letter-circle');
+        circle.classList.remove('bg-slate-900', 'text-white', 'border-slate-900', 'dark:bg-slate-50', 'dark:text-slate-900');
+        circle.classList.add('border-slate-200', 'dark:border-slate-700');
+      });
+      
+      element.classList.add('ring-2', 'ring-slate-900', 'dark:ring-slate-50', 'border-slate-900', 'dark:border-slate-50', 'bg-slate-50', 'dark:bg-slate-900');
+      const activeCircle = element.querySelector('.letter-circle');
+      activeCircle.classList.add('bg-slate-900', 'text-white', 'border-slate-900', 'dark:bg-slate-50', 'dark:text-slate-900');
+      activeCircle.classList.remove('border-slate-200', 'dark:border-slate-700');
+      
+      document.getElementById('check-btn').disabled = false;
+    }
+
+    document.getElementById('check-btn').addEventListener('click', () => {
+      if (!selectedLetter) return;
+      showingSolution = true;
+      
+      const item = quizItems[currentIndex];
+      const correct = item.question.correctOption;
+      
+      if (selectedLetter === correct) correctCount++;
+      updateScore();
+      
+      document.querySelectorAll('.option-card').forEach(el => {
+        const letter = el.querySelector('.letter-circle').innerText.trim();
+        const circle = el.querySelector('.letter-circle');
+        
+        el.classList.remove('ring-2', 'ring-slate-900', 'dark:ring-slate-50', 'border-slate-900', 'dark:border-slate-50');
+        
+        if (letter === correct) {
+          el.classList.add('border-emerald-500', 'bg-emerald-50', 'dark:bg-emerald-950/20', 'ring-1', 'ring-emerald-500');
+          circle.classList.add('bg-emerald-500', 'text-white', 'border-emerald-500');
+          circle.classList.remove('bg-slate-900', 'dark:bg-slate-50', 'text-slate-900', 'border-slate-200', 'dark:border-slate-700');
+        } else if (letter === selectedLetter && selectedLetter !== correct) {
+          el.classList.add('border-red-500', 'bg-red-50', 'dark:bg-red-950/20', 'ring-1', 'ring-red-500');
+          circle.classList.add('bg-red-500', 'text-white', 'border-red-500');
+          circle.classList.remove('bg-slate-900', 'dark:bg-slate-50', 'text-slate-900', 'border-slate-200', 'dark:border-slate-700');
+        } else {
+          el.classList.add('opacity-40');
+        }
+      });
+      
+      document.getElementById('check-btn').classList.add('hidden');
+      document.getElementById('next-btn').classList.remove('hidden');
+      
+      const solText = document.getElementById('solution-text');
+      const rawSolution = item.question.solution || "> *No detailed solution provided.*";
+      solText.innerHTML = marked.parse(rawSolution);
+      document.getElementById('solution-container').classList.remove('hidden');
+      
+      // Auto scroll to solution
+      setTimeout(() => {
+        document.getElementById('solution-container').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    });
+
+    document.getElementById('next-btn').addEventListener('click', () => {
+      if (currentIndex < quizItems.length - 1) {
+        currentIndex++;
+        renderQuestion();
+      } else {
+        const percentage = Math.round((correctCount / quizItems.length) * 100);
+        document.getElementById('question-text').innerHTML = `
+          <div class="text-center py-12">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-500 mb-6">
+               <i data-lucide="award" class="w-10 h-10"></i>
+            </div>
+            <h2 class="text-3xl font-bold mb-3">Session Complete!</h2>
+            <p class="text-slate-500 dark:text-slate-400 text-lg max-w-sm mx-auto">You scored <span class="font-bold text-slate-900 dark:text-slate-100">${correctCount}</span> out of <span class="font-bold text-slate-900 dark:text-slate-100">${quizItems.length}</span> questions correctly (${percentage}%).</p>
+            
+            <div class="mt-10 flex gap-4 justify-center">
+              <button onclick="location.reload()" class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-6 bg-slate-900 text-slate-50 hover:bg-slate-900/90 dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90 shadow-sm">
+                <i data-lucide="rotate-ccw" class="w-4 h-4 mr-2"></i> Start Over
+              </button>
+            </div>
+          </div>
+        `;
+        document.getElementById('options-container').innerHTML = '';
+        document.getElementById('solution-container').classList.add('hidden');
+        document.getElementById('next-btn').classList.add('hidden');
+        document.getElementById('problem-container').classList.add('hidden');
+        lucide.createIcons();
+      }
+    });
+  </script>
+</body>
+</html>
