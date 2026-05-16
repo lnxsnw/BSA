@@ -35,10 +35,10 @@ correct_option: "A"
 # [Insert the specific question text here]
 
 ## Options
-- [ ] A) [Option 1 text]
-- [ ] B) [Option 2 text]
-- [ ] C) [Option 3 text]
-- [ ] D) [Option 4 text]
+- [ ] A. [Option 1 text]
+- [ ] B. [Option 2 text]
+- [ ] C. [Option 3 text]
+- [ ] D. [Option 4 text]
 
 > [!success]- Solution
 > **[Correct Option Letter]** is the correct answer. 
@@ -60,10 +60,10 @@ correct_option: "B"
 # Why is accounting often called the "language of business"?
 
 ## Options
-- [ ] A) Because accountants create secret codes to communicate with other accountants
-- [ ] B) Because it provides a standardized way of recording, summarizing, and reporting business transactions
-- [ ] C) Because it teaches people how to speak financial jargon fluently
-- [ ] D) Because it focuses only on money and ignores other aspects of business operations
+- [ ] A. Because accountants create secret codes to communicate with other accountants
+- [ ] B. Because it provides a standardized way of recording, summarizing, and reporting business transactions
+- [ ] C. Because it teaches people how to speak financial jargon fluently
+- [ ] D. Because it focuses only on money and ignores other aspects of business operations
 
 > [!success]- Solution
 > **B** is the correct answer. 
